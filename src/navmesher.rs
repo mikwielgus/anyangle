@@ -2,6 +2,8 @@
 //
 // SPDX-License-Identifier: MIT OR Apache-2.0
 
+use core::iter::{ExactSizeIterator, IntoIterator};
+
 use polygon_unionfind::{
     Difference, Inflate, Intersection, Laminate, PolygonWithData, Rings, Union,
 };
@@ -36,14 +38,17 @@ where
         + Difference<PolygonWithData<K, D>>
         + Intersection<PolygonWithData<K, D>>,
 {
-    pub fn new(
+    pub fn new<PI>(
         boundary: impl IntoIterator<Item = [K; 2]>,
         num_layers: usize,
-        parallel_inflations: impl IntoIterator<Item = K>,
+        parallel_inflations: PI,
         rail_offsets: impl IntoIterator<Item = K>,
-    ) -> Self {
-        let parallel_inflations: Vec<K> = parallel_inflations.into_iter().collect();
-        let rail_offsets: Vec<K> = rail_offsets.into_iter().collect();
+    ) -> Self
+    where
+        PI: IntoIterator<Item = K>,
+        PI::IntoIter: ExactSizeIterator,
+    {
+        let parallel_inflations = parallel_inflations.into_iter();
         let row_count = parallel_inflations.len() + 1;
 
         let boundary = PolygonWithData {
