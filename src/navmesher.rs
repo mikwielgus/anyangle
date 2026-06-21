@@ -67,7 +67,7 @@ where
         let navmeshes: Vec<_> = (0..row_count)
             .map(|row| {
                 let mut navmesh = N::default();
-                navmesh.remesh(&shapes_per_layer(&laminate, row, 0));
+                navmesh.remesh(shapes_per_layer(&laminate, row, 0));
                 navmesh
             })
             .collect();
@@ -82,7 +82,7 @@ where
         self.laminate.add_into_lamina(layer, polygon);
 
         for (row, navmesh) in self.navmeshes.iter_mut().enumerate() {
-            navmesh.remesh(&shapes_per_layer(&self.laminate, row, 0));
+            navmesh.remesh(shapes_per_layer(&self.laminate, row, 0));
         }
     }
 }
@@ -91,23 +91,19 @@ fn shapes_per_layer<K: RTreeNum, D>(
     laminate: &Laminate<K, PolygonWithData<K, D>>,
     row: usize,
     subrow: usize,
-) -> Vec<Vec<Vec<Vec<[K; 2]>>>> {
-    laminate
-        .laminas()
-        .iter()
-        .map(|lamina| {
-            lamina
-                .row(row)
-                .row(subrow)
-                .minuend()
-                .polygons()
-                .values()
-                .map(|polygon| {
-                    once(polygon.exterior().to_vec())
-                        .chain(polygon.interiors().map(|interior| interior.to_vec()))
-                        .collect()
-                })
-                .collect()
-        })
-        .collect()
+) -> impl Iterator<Item = Vec<Vec<Vec<[K; 2]>>>> + '_ {
+    laminate.laminas().iter().map(move |lamina| {
+        lamina
+            .row(row)
+            .row(subrow)
+            .minuend()
+            .polygons()
+            .values()
+            .map(|polygon| {
+                once(polygon.exterior().to_vec())
+                    .chain(polygon.interiors().map(|interior| interior.to_vec()))
+                    .collect()
+            })
+            .collect()
+    })
 }

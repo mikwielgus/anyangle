@@ -152,10 +152,10 @@ fn store_delaunay_in_navmesh_layer<K: Copy>(
 macro_rules! impl_remesh_float {
     ($k:ty) => {
         impl Remesh<$k> for DelaunayNavmesh<$k> {
-            fn remesh(&mut self, shapes_per_layer: &[Vec<Vec<Vec<[$k; 2]>>>]) {
+            fn remesh(&mut self, shapes_per_layer: impl Iterator<Item = Vec<Vec<Vec<[$k; 2]>>>>) {
                 let boundary_id = DelaunayTriangleId::new(usize::MAX, usize::MAX);
 
-                for (layer_index, shapes) in shapes_per_layer.iter().enumerate() {
+                for (layer_index, shapes) in shapes_per_layer.enumerate() {
                     let triangulation = shapes.as_slice().triangulate().into_delaunay();
                     let points = triangulation.points();
                     let indices = triangulation.triangle_indices::<usize>();
@@ -178,10 +178,10 @@ macro_rules! impl_remesh_float {
 macro_rules! impl_remesh_int {
     ($k:ty) => {
         impl Remesh<$k> for DelaunayNavmesh<$k> {
-            fn remesh(&mut self, shapes_per_layer: &[Vec<Vec<Vec<[$k; 2]>>>]) {
+            fn remesh(&mut self, shapes_per_layer: impl Iterator<Item = Vec<Vec<Vec<[$k; 2]>>>>) {
                 let boundary_id = DelaunayTriangleId::new(usize::MAX, usize::MAX);
 
-                for (layer_index, shapes) in shapes_per_layer.iter().enumerate() {
+                for (layer_index, shapes) in shapes_per_layer.enumerate() {
                     let int_shapes: IntShapes<_> = shapes
                         .iter()
                         .map(|shape| {
