@@ -2,7 +2,7 @@
 //
 // SPDX-License-Identifier: MIT OR Apache-2.0
 
-use core::iter::{ExactSizeIterator, IntoIterator};
+use core::iter::{ExactSizeIterator, IntoIterator, once};
 
 use polygon_unionfind::{
     Difference, Inflate, Intersection, Laminate, PolygonWithData, Rings, Union,
@@ -64,13 +64,13 @@ where
             rail_offsets,
         );
 
-        let mut navmeshes = vec![];
-
-        for row in 0..row_count {
-            let mut navmesh = N::default();
-            navmesh.remesh(&Self::shapes_per_layer(&laminate, row, 0));
-            navmeshes.push(navmesh);
-        }
+        let navmeshes: Vec<_> = (0..row_count)
+            .map(|row| {
+                let mut navmesh = N::default();
+                navmesh.remesh(&shapes_per_layer(&laminate, row, 0));
+                navmesh
+            })
+            .collect();
 
         Self {
             laminate,
@@ -82,34 +82,32 @@ where
         self.laminate.add_into_lamina(layer, polygon);
 
         for (row, navmesh) in self.navmeshes.iter_mut().enumerate() {
-            navmesh.remesh(&Self::shapes_per_layer(&self.laminate, row, 0));
+            navmesh.remesh(&shapes_per_layer(&self.laminate, row, 0));
         }
     }
+}
 
-    fn shapes_per_layer(
-        laminate: &Laminate<K, PolygonWithData<K, D>>,
-        row: usize,
-        subrow: usize,
-    ) -> Vec<Vec<Vec<Vec<[K; 2]>>>> {
-        let mut shapes_per_layer = Vec::new();
-
-        for lamina in laminate.laminas().iter() {
-            let polygon_set = lamina.row(row).row(subrow).minuend();
-            let mut shape = vec![];
-
-            for polygon in polygon_set.polygons().values() {
-                let mut contours = vec![polygon.exterior().to_vec()];
-
-                for interior in polygon.interiors() {
-                    contours.push(interior.to_vec());
-                }
-
-                shape.push(contours);
-            }
-
-            shapes_per_layer.push(shape);
-        }
-
-        shapes_per_layer
-    }
+fn shapes_per_layer<K: RTreeNum, D>(
+    laminate: &Laminate<K, PolygonWithData<K, D>>,
+    row: usize,
+    subrow: usize,
+) -> Vec<Vec<Vec<Vec<[K; 2]>>>> {
+    laminate
+        .laminas()
+        .iter()
+        .map(|lamina| {
+            lamina
+                .row(row)
+                .row(subrow)
+                .minuend()
+                .polygons()
+                .values()
+                .map(|polygon| {
+                    once(polygon.exterior().to_vec())
+                        .chain(polygon.interiors().map(|interior| interior.to_vec()))
+                        .collect()
+                })
+                .collect()
+        })
+        .collect()
 }
