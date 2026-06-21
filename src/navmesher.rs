@@ -2,8 +2,6 @@
 //
 // SPDX-License-Identifier: MIT OR Apache-2.0
 
-use std::marker::PhantomData;
-
 use polygon_unionfind::{
     Difference, Inflate, Intersection, Laminate, PolygonWithData, Rings, Union,
 };
@@ -14,7 +12,6 @@ use crate::navmesh::Remesh;
 pub struct Navmesher<K: RTreeNum, N, D> {
     laminate: Laminate<K, PolygonWithData<K, D>>,
     navmeshes: Vec<N>,
-    scalar_marker: PhantomData<K>,
 }
 
 impl<K: RTreeNum, N, D> Navmesher<K, N, D> {
@@ -73,7 +70,6 @@ where
         Self {
             laminate,
             navmeshes,
-            scalar_marker: PhantomData,
         }
     }
 
