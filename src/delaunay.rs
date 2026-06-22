@@ -2,7 +2,7 @@
 //
 // SPDX-License-Identifier: MIT OR Apache-2.0
 
-use std::ops::{Add, Div};
+use core::ops::{Add, Div};
 
 use i_triangle::{
     float::triangulatable::Triangulatable,
