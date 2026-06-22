@@ -5,7 +5,8 @@
 use core::iter::{ExactSizeIterator, IntoIterator, once};
 
 use polygon_unionfind::{
-    Difference, Inflate, Intersection, Laminate, PolygonWithData, Rings, Union,
+    Difference, Inflate, Inflated, Intersection, Laminate, Negated, Paralleled, PolygonSet,
+    PolygonUnionFind, PolygonWithData, Rings, Union,
 };
 use rstar::RTreeNum;
 
@@ -80,9 +81,10 @@ where
 
     pub fn insert_polygon(&mut self, layer: usize, polygon: PolygonWithData<K, D>) {
         self.laminate.add_into_lamina(layer, polygon);
+        let lamina = &self.laminate.laminas()[layer];
 
         for (row, navmesh) in self.navmeshes.iter_mut().enumerate() {
-            navmesh.remesh(shapes_per_layer(&self.laminate, row, 0));
+            navmesh.remesh_at(layer, shapes_for_lamina(lamina, row, 0));
         }
     }
 }
@@ -92,18 +94,34 @@ fn shapes_per_layer<K: RTreeNum, D>(
     row: usize,
     subrow: usize,
 ) -> impl Iterator<Item = Vec<Vec<Vec<[K; 2]>>>> + ExactSizeIterator + '_ {
-    laminate.laminas().iter().map(move |lamina| {
-        lamina
-            .row(row)
-            .row(subrow)
-            .minuend()
-            .polygons()
-            .values()
-            .map(|polygon| {
-                once(polygon.exterior().to_vec())
-                    .chain(polygon.interiors().map(|interior| interior.to_vec()))
-                    .collect()
-            })
-            .collect()
-    })
+    laminate
+        .laminas()
+        .iter()
+        .map(move |lamina| shapes_for_lamina(lamina, row, subrow))
+}
+
+fn shapes_for_lamina<K: RTreeNum, D>(
+    lamina: &Paralleled<
+        Paralleled<
+            Negated<
+                PolygonSet<K, PolygonWithData<K, D>>,
+                Inflated<PolygonUnionFind<K, PolygonWithData<K, D>>, K>,
+            >,
+        >,
+    >,
+    row: usize,
+    subrow: usize,
+) -> Vec<Vec<Vec<[K; 2]>>> {
+    lamina
+        .row(row)
+        .row(subrow)
+        .minuend()
+        .polygons()
+        .values()
+        .map(|polygon| {
+            once(polygon.exterior().to_vec())
+                .chain(polygon.interiors().map(|interior| interior.to_vec()))
+                .collect()
+        })
+        .collect()
 }
