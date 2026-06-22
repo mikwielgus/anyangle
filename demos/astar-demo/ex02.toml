@@ -1,0 +1,64 @@
+ext_boundary = [
+    [0, 0],
+    [0, 100],
+    [100, 100],
+    [100, 0],
+]
+
+norm = "diagonal-taxicab"
+
+layer_transition_penality = 10
+
+obstacles = [
+    {
+        exterior = [
+            [10, 10],
+            [10, 20],
+            [20, 20],
+            [20, 10],
+        ],
+        layers = [0]
+    },
+    {
+        exterior = [
+            [20, 20],
+            [20, 50],
+            [50, 50],
+            [50, 20],
+        ],
+        layers = [0]
+    },
+    {
+        exterior = [
+            [20, 20],
+            [20, 40],
+            [40, 40],
+            [40, 20],
+        ],
+        layers = [1]
+    },
+    {
+        exterior = [
+            [40, 40],
+            [40, 60],
+            [60, 60],
+            [60, 40],
+        ],
+        layers = [1]
+    },
+]
+
+endpoints = [
+    {
+        exterior = [
+            [20, 20],
+        ],
+        layers = [0]
+    },
+    {
+        exterior = [
+            [40, 40],
+        ],
+        layers = [1]
+    },
+]

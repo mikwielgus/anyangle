@@ -1,0 +1,464 @@
+// SPDX-FileCopyrightText: 2026 anyangle contributors
+//
+// SPDX-License-Identifier: MIT OR Apache-2.0
+
+use alloc::{
+    collections::{BTreeMap, BTreeSet, BinaryHeap},
+    vec,
+    vec::Vec,
+};
+use core::{cmp::Ordering, fmt};
+
+use approx::AbsDiffEq;
+use num_traits::Zero;
+
+use super::{LayerIds, MultiLayerNavmesh, Topo2DComplex};
+use crate::LayerId;
+
+/// A node of a path from source to sink, including layer information
+#[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord)]
+pub struct Node<T> {
+    pub fixed: T,
+    pub layer: LayerId,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct Endpoint<T> {
+    pub fixed: BTreeSet<T>,
+    pub layers: LayerIds,
+}
+
+/// The data for each step from source to sink with explicit layer transitions
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub enum FunnelEntry<V> {
+    Point(Node<V>),
+    LayerTransition(LayerId, LayerId),
+}
+
+struct BestPaths<S, T>(BTreeMap<Node<T>, Entry<S, T>>);
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord)]
+enum BestPathKey<F, V> {
+    Face(F),
+    Vertex(V),
+}
+
+impl<S: Ord + fmt::Debug, T: Ord + fmt::Debug> BestPaths<S, T> {
+    fn reconstruct_path<'a>(&'a self, current: &'a Node<T>) -> Vec<&'a Node<T>> {
+        let mut current = current;
+        let mut ret = vec![current];
+        while let Some(Entry { key, .. }) = self.0.get(current) {
+            current = key;
+            ret.push(key);
+        }
+        ret.reverse();
+        ret
+    }
+}
+
+/// An annotated node or other key, for ranking in a binary heap.
+#[derive(Clone, Debug)]
+struct Entry<S, T> {
+    // end score = g_score + guessed_final_lower_score
+    score: S,
+    key: Node<T>,
+}
+
+impl<S: Ord, T: Ord> Ord for Entry<S, T> {
+    fn cmp(&self, other: &Self) -> Ordering {
+        // flip ordering on score
+        S::cmp(&other.score, &self.score).then_with(|| self.key.cmp(&other.key))
+    }
+}
+
+impl<S: Ord, T: Eq> Eq for Entry<S, T> {}
+
+impl<S: Ord, T: Ord> PartialOrd for Entry<S, T> {
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        Some(self.cmp(other))
+    }
+}
+
+impl<S: Ord, T: PartialEq> PartialEq for Entry<S, T> {
+    fn eq(&self, other: &Self) -> bool {
+        S::cmp(&self.score, &other.score) == Ordering::Equal && self.key == other.key
+    }
+    #[allow(clippy::partialeq_ne_impl)]
+    fn ne(&self, other: &Self) -> bool {
+        S::cmp(&self.score, &other.score) != Ordering::Equal || self.key != other.key
+    }
+}
+
+/// The constant environment during an A* search (i.e. what never changes during an [`astar`] invocation).
+struct Environment<'a, T: MultiLayerNavmesh, Score, Pnf> {
+    mesh: &'a T,
+    point_norm: Pnf,
+    final_end: Endpoint<T::VertexId>,
+    epsilon: <T::Scalar as AbsDiffEq>::Epsilon,
+    layer_transition_penality: Score,
+}
+
+impl<T, Score, Pnf> Environment<'_, T, Score, Pnf>
+where
+    T: MultiLayerNavmesh,
+    <<T as Topo2DComplex>::Scalar as AbsDiffEq>::Epsilon: Clone,
+    Score: Clone + Ord + Zero + fmt::Debug,
+    Pnf: Fn(&[T::Scalar; 2]) -> Score,
+{
+    fn funnel(
+        &self,
+        best_paths: &BestPaths<Score, BestPathKey<T::FaceId, T::VertexId>>,
+        // if intermed_end is set, then `best_paths` is only traversed up to that,
+        // and `end` is assumed to be directly linked to that.
+        intermed_end: Option<&Node<T::FaceId>>,
+        // the final triangle
+        end: &Node<T::FaceId>,
+    ) -> (Vec<FunnelEntry<T::VertexId>>, Vec<Node<T::FaceId>>) {
+        let end = Node {
+            fixed: BestPathKey::Face(end.fixed),
+            layer: end.layer,
+        };
+        let intermed_end = intermed_end.map(|intermed_end| Node {
+            fixed: BestPathKey::Face(intermed_end.fixed),
+            layer: intermed_end.layer,
+        });
+        let mut best_path = match &intermed_end {
+            None => best_paths.reconstruct_path(&end),
+            Some(intermed_end) => {
+                let mut best_path = best_paths.reconstruct_path(intermed_end);
+                if best_path.iter().find(|&&i| i == &end).is_some() {
+                    return (Vec::new(), Vec::new());
+                }
+                best_path.push(&end);
+                best_path
+            }
+        };
+
+        // reconstruct funnel
+        if best_path.is_empty() {
+            // unreachable
+            return (Vec::new(), Vec::new());
+        }
+        let start = match best_path.remove(0) {
+            Node {
+                fixed: BestPathKey::Vertex(fixed),
+                layer,
+            } => Node {
+                fixed: *fixed,
+                layer: *layer,
+            },
+            _ => panic!("Start of every path is a vertex"),
+        };
+        let mut funnel = crate::funnel::SimpleFunnel::<T::Scalar, Node<T::VertexId>>::new(
+            (self.mesh.vertex_position(start.fixed), start),
+            self.epsilon.clone(),
+        );
+        let mut ret = Vec::<FunnelEntry<T::VertexId>>::new();
+
+        if start.layer != best_path.first().unwrap().layer {
+            // illegal move
+            return (Vec::new(), Vec::new());
+        }
+
+        ret.push(FunnelEntry::Point(funnel.apex.1));
+
+        let best_path = best_path
+            .into_iter()
+            .map(|Node { fixed, layer }| match fixed {
+                BestPathKey::Face(fixed) => Node {
+                    fixed: *fixed,
+                    layer: *layer,
+                },
+                _ => panic!("Continuation of every path is a face"),
+            })
+            .collect::<Vec<_>>();
+
+        for i in best_path.windows(2) {
+            let (i, j) = (i[0], i[1]);
+            match (i.layer == j.layer, i.fixed == j.fixed) {
+                (true, true) | (false, false) => {
+                    // invalid move
+                    return (Vec::new(), Vec::new());
+                }
+                (false, true) => {
+                    // layer transition
+                    ret.push(FunnelEntry::LayerTransition(i.layer, j.layer));
+                }
+                (true, false) => {
+                    // face transition
+                    let Some(portal) = self.mesh.portal_between(i.fixed, j.fixed) else {
+                        return (Vec::new(), Vec::new());
+                    };
+                    let portal = portal.map(|fixed| {
+                        (
+                            self.mesh.vertex_position(fixed),
+                            Node {
+                                fixed,
+                                layer: j.layer,
+                            },
+                        )
+                    });
+                    if let Some((_, (_, new_apex))) = funnel.advance(portal) {
+                        ret.push(FunnelEntry::Point(*new_apex));
+                    }
+                }
+            }
+        }
+
+        let final_measure_point = &funnel.apex.0;
+        let mut choices: Vec<_> = self
+            .final_end
+            .fixed
+            .iter()
+            .map(|&final_end_fixed| {
+                let final_end_pos = (
+                    self.mesh.vertex_position(final_end_fixed),
+                    Node {
+                        fixed: final_end_fixed,
+                        layer: funnel.apex.1.layer,
+                    },
+                );
+                let tmp = funnel
+                    .clone()
+                    .advance([final_end_pos.clone(), final_end_pos.clone()])
+                    .map(|(_, new_apex)| new_apex.clone());
+                let length = if let Some((new_apex_pos, _)) = &tmp {
+                    self.point_distance(final_measure_point, new_apex_pos)
+                        + self.point_distance(new_apex_pos, &final_end_pos.0)
+                } else {
+                    self.point_distance(final_measure_point, &final_end_pos.0)
+                };
+                (length, tmp.map(|(_, fixed)| fixed), final_end_pos.1)
+            })
+            .collect();
+        choices.sort_by_key(|(k, _, _)| k.clone());
+        let &(_, maybe_new_apex, mut final_end) = choices.first().unwrap();
+        if let Some(new_apex) = maybe_new_apex {
+            ret.push(FunnelEntry::Point(new_apex));
+            final_end.layer = new_apex.layer;
+        }
+        if !self.final_end.layers.is_on_layer(final_end.layer) {
+            let mut current_layer = final_end.layer;
+            let (closest, next) = match self
+                .final_end
+                .layers
+                .closest_contained_layer_to(current_layer)
+            {
+                [None, None] => {
+                    // all moves are illegal
+                    return (Vec::new(), Vec::new());
+                }
+                [Some(closest), _] => (
+                    closest,
+                    LayerId::checked_sub_one as fn(LayerId) -> Option<LayerId>,
+                ),
+                [_, Some(closest)] => (
+                    closest,
+                    LayerId::checked_add_one as fn(LayerId) -> Option<LayerId>,
+                ),
+            };
+            while current_layer != closest {
+                let prev_layer = current_layer;
+                // UNWRAP SAFETY: closest is reachable from current_layer via next
+                // because the same function is used in `closest_contained_layer_to`.
+                current_layer = next(prev_layer).unwrap();
+                ret.push(FunnelEntry::LayerTransition(prev_layer, current_layer));
+            }
+            final_end.layer = current_layer;
+        }
+        ret.push(FunnelEntry::Point(final_end));
+        (ret, best_path)
+    }
+
+    fn point_distance(&self, a: &[T::Scalar; 2], b: &[T::Scalar; 2]) -> Score {
+        (self.point_norm)(&crate::math::delta(a, b))
+    }
+
+    fn calculate_score(
+        &self,
+        best_paths: &BestPaths<Score, BestPathKey<T::FaceId, T::VertexId>>,
+        // if intermed_end is set, then `best_paths` is only traversed up to that,
+        // and `end` is assumed to be directly linked to that.
+        intermed_end: Option<&Node<T::FaceId>>,
+        // the final triangle
+        end: &Node<T::FaceId>,
+    ) -> Option<(Score, Vec<FunnelEntry<T::VertexId>>, Vec<Node<T::FaceId>>)> {
+        let (funneled, best_path) = self.funnel(best_paths, intermed_end, end);
+
+        if funneled.is_empty() {
+            return None;
+        }
+
+        let mut score = Score::zero();
+
+        let funneled_apices: Vec<_> = funneled
+            .iter()
+            .filter_map(|i| match i {
+                FunnelEntry::LayerTransition(_, _) => {
+                    score = score.clone() + self.layer_transition_penality.clone();
+                    None
+                }
+                FunnelEntry::Point(new_apex) => Some(new_apex),
+            })
+            .collect();
+
+        for i in funneled_apices.windows(2) {
+            score = score
+                + self.point_distance(
+                    &self.mesh.vertex_position(i[0].fixed),
+                    &self.mesh.vertex_position(i[1].fixed),
+                );
+        }
+
+        Some((score, funneled, best_path))
+    }
+}
+
+pub fn astar<T, Score, Pnf>(
+    mesh: &T,
+    point_norm: Pnf,
+    start: Endpoint<T::VertexId>,
+    end: Endpoint<T::VertexId>,
+    epsilon: <T::Scalar as AbsDiffEq>::Epsilon,
+    layer_transition_penality: Score,
+) -> Vec<FunnelEntry<T::VertexId>>
+where
+    T: MultiLayerNavmesh,
+    <T::Scalar as AbsDiffEq>::Epsilon: Clone,
+    Score: Clone + Ord + Zero + fmt::Debug,
+    Pnf: Fn(&[T::Scalar; 2]) -> Score,
+{
+    let mut best_paths = BestPaths::<_, BestPathKey<_, _>>(Default::default());
+    let mut heap = BinaryHeap::<Entry<Score, T::FaceId>>::new();
+    let env = Environment {
+        mesh,
+        point_norm,
+        final_end: end,
+        epsilon,
+        layer_transition_penality,
+    };
+
+    // initialize heap
+    for &fixed_vertex in &start.fixed {
+        let bp_entry = |layer: LayerId| Entry {
+            score: Score::zero(),
+            key: Node {
+                fixed: BestPathKey::Vertex(fixed_vertex),
+                layer,
+            },
+        };
+        for inner_face in mesh
+            .vertex_adjacent_faces(fixed_vertex)
+            .collect::<BTreeSet<_>>()
+        {
+            // no need to adjust best_paths, that stores only paths via faces,
+            // not vertex-face paths.
+
+            // filter untraversable triangles
+            for layer in &((&mesh.face_layers(inner_face)) & (&start.layers)) {
+                let node = Node {
+                    fixed: inner_face,
+                    layer,
+                };
+                best_paths.0.insert(
+                    Node {
+                        fixed: BestPathKey::Face(inner_face),
+                        layer,
+                    },
+                    bp_entry(layer),
+                );
+                let Some((score, _, _)) = env.calculate_score(&best_paths, None, &node) else {
+                    continue;
+                };
+
+                heap.push(Entry { score, key: node });
+            }
+        }
+    }
+
+    // main search loop
+    while let Some(cur) = heap.pop() {
+        if env.final_end.layers.is_on_layer(cur.key.layer)
+            && env
+                .mesh
+                .face_adjacent_vertices(cur.key.fixed)
+                .find(|fixed| env.final_end.fixed.contains(fixed))
+                .is_some()
+        {
+            let ret = env.funnel(&best_paths, None, &cur.key);
+            return ret.0;
+        }
+
+        // TODO(fogti): catch cases where this iteration has a worse score than the best path to this node
+
+        let face_transition = env
+            .mesh
+            .face_adjacent_faces(cur.key.fixed)
+            // filter untraversable faces
+            .filter(|&inner_face| env.mesh.face_layers(inner_face).is_on_layer(cur.key.layer))
+            .map(|fixed| Node {
+                fixed,
+                layer: cur.key.layer,
+            });
+
+        let layer_transition = env
+            .mesh
+            .face_layers(cur.key.fixed)
+            .adjacent_layers_to(cur.key.layer)
+            .into_iter()
+            .map(|layer| Node {
+                fixed: cur.key.fixed,
+                layer,
+            });
+
+        let next_nodes = face_transition
+            .chain(layer_transition)
+            // weigh candidates
+            .filter_map(|next_node| {
+                env.calculate_score(&best_paths, Some(&cur.key), &next_node)
+                    .map(|(score, _, _)| (next_node, score))
+            })
+            .map(|(next_node, score)| {
+                (
+                    next_node,
+                    score,
+                    Node {
+                        fixed: BestPathKey::Face(next_node.fixed),
+                        layer: next_node.layer,
+                    },
+                )
+            })
+            // filter cases of worse newer scores
+            .filter(|(_, score, bp_node)| {
+                if let Some(Entry {
+                    score: old_score, ..
+                }) = best_paths.0.get(bp_node)
+                    && score >= old_score
+                {
+                    false
+                } else {
+                    true
+                }
+            })
+            .collect::<Vec<_>>();
+
+        for (next_node, score, bp_node) in next_nodes {
+            best_paths.0.insert(
+                bp_node,
+                Entry {
+                    key: Node {
+                        fixed: BestPathKey::Face(cur.key.fixed),
+                        layer: cur.key.layer,
+                    },
+                    score: score.clone(),
+                },
+            );
+            heap.push(Entry {
+                key: next_node,
+                score,
+            });
+        }
+    }
+
+    Vec::new()
+}

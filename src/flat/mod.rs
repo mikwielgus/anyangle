@@ -5,7 +5,10 @@
 //! two faces is [connected](https://en.wikipedia.org/wiki/Connected_space).
 
 use approx::AbsDiffEq;
+use core::fmt;
 use num_traits::Num;
+
+pub mod astar;
 
 mod layer;
 pub use layer::{GetLayerIds, Iter as LayerIdsIter, LayerIds};
@@ -14,8 +17,8 @@ mod tesselation;
 pub use tesselation::{Face, FrozenFace, FrozenFaceNeighbour, FrozenTesselation, Tesselation};
 
 pub trait Topo2DComplex {
-    type VertexId: Sized + Copy + Eq + Ord;
-    type FaceId: Sized + Copy + Eq + Ord;
+    type VertexId: Sized + Copy + Eq + Ord + fmt::Debug;
+    type FaceId: Sized + Copy + Eq + Ord + fmt::Debug;
     type Scalar: Sized + Clone + AbsDiffEq + Num + PartialOrd;
 
     fn vertex_position(&self, vertex: Self::VertexId) -> [Self::Scalar; 2];
