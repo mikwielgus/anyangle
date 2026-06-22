@@ -4,6 +4,7 @@
 
 mod delaunay;
 pub mod funnel;
+pub mod math;
 mod navmesh;
 mod navmesher;
 

@@ -3,13 +3,11 @@
 // SPDX-License-Identifier: MIT OR Apache-2.0
 //! An implementation of the [simple stupid funnel algorithm](https://digestingduck.blogspot.com/2010/03/simple-stupid-funnel-algorithm.html).
 
-use core::{
-    cmp::PartialOrd,
-    mem,
-    ops::{Mul, Sub},
-};
+use core::{cmp::PartialOrd, mem};
 
 use num_traits::sign::Signed;
+
+use crate::math::*;
 
 #[derive(Clone, Copy, Debug, Default)]
 pub struct SimpleFunnel<K> {
@@ -46,9 +44,9 @@ where
                     v < K::default()
                 }
             };
-            if !comp(triarea2(&apex, &bhs, bportal)) {
-                if approx_eq(&apex, &bhs, self.epsilon.clone())
-                    || comp(triarea2(&apex, &ahs, bportal))
+            if !comp(triarea2(apex, bhs, bportal)) {
+                if approx_eq(apex, bhs, self.epsilon.clone())
+                    || comp(triarea2(apex, ahs, bportal))
                 {
                     // Tighten the funnel
                     *bhs = bportal.clone();
@@ -74,38 +72,6 @@ where
 
         None
     }
-}
-
-/// Calculates the oriented area between 3 points
-fn triarea2<K>(a: &[K; 2], b: &[K; 2], c: &[K; 2]) -> K
-where
-    K: Clone + Sub<Output = K> + Mul<Output = K>,
-{
-    perp_product(delta(b, a), delta(c, a))
-}
-
-/// Calculates the 2D perpendicular product between 2 points
-fn perp_product<K>(a: [K; 2], b: [K; 2]) -> K
-where
-    K: Clone + Sub<Output = K> + Mul<Output = K>,
-{
-    b[0].clone() * a[1].clone() - a[0].clone() * b[1].clone()
-}
-
-/// Calculates the difference between 2 points
-fn delta<K>(a: &[K; 2], b: &[K; 2]) -> [K; 2]
-where
-    K: Clone + Sub<Output = K>,
-{
-    [a[0].clone() - b[0].clone(), a[1].clone() - b[1].clone()]
-}
-
-fn approx_eq<K>(a: &[K; 2], b: &[K; 2], epsilon: K) -> bool
-where
-    K: Clone + Sub<Output = K> + Signed + PartialOrd,
-{
-    let d = delta(a, b);
-    d[0].abs() <= epsilon && d[1].abs() <= epsilon
 }
 
 #[cfg(test)]
