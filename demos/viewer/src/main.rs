@@ -167,11 +167,7 @@ fn interlaminas_section_y0(n_layers: usize, n_parallel_rows: usize) -> f32 {
     panel_bottom_after_parallel_rows(n_layers, n_parallel_rows) + 22.0_f32
 }
 
-fn interlamina_row_top(
-    n_layers: usize,
-    n_parallel_rows: usize,
-    inter_index: usize,
-) -> f32 {
+fn interlamina_row_top(n_layers: usize, n_parallel_rows: usize, inter_index: usize) -> f32 {
     let y0 = interlaminas_section_y0(n_layers, n_parallel_rows);
     let h = 34.0_f32;
     let gap = 6.0_f32;
@@ -186,12 +182,7 @@ fn left_panel_bottom(n_layers: usize, n_parallel_rows: usize, n_inter: usize) ->
     }
 }
 
-fn ui_blocks_click(
-    mouse: Vec2,
-    n_layers: usize,
-    n_parallel_rows: usize,
-    n_inter: usize,
-) -> bool {
+fn ui_blocks_click(mouse: Vec2, n_layers: usize, n_parallel_rows: usize, n_inter: usize) -> bool {
     if mouse.x >= 235.0 {
         return false;
     }
@@ -230,11 +221,7 @@ fn row_radio_contains(mouse: Vec2, n_layers: usize, row_index: usize) -> bool {
     row_radio_center(n_layers, row_index).distance(mouse) <= 14.0
 }
 
-fn interlamina_panel_rect(
-    n_layers: usize,
-    n_parallel_rows: usize,
-    inter_index: usize,
-) -> Rect {
+fn interlamina_panel_rect(n_layers: usize, n_parallel_rows: usize, inter_index: usize) -> Rect {
     let h = 34.0_f32;
     Rect::new(
         12.0,
@@ -254,8 +241,7 @@ fn interlamina_checkbox_square(
 }
 
 fn interlamina_accent(inter_index: usize, inter_count: usize) -> Color {
-    let hue_deg =
-        (inter_index as f32 / inter_count.max(1) as f32) * 110.0_f32 + 125.0_f32;
+    let hue_deg = (inter_index as f32 / inter_count.max(1) as f32) * 110.0_f32 + 125.0_f32;
     let (r, g, b) = hsv_to_rgb(hue_deg, 0.55, 1.0);
     Color::new(r, g, b, 1.0)
 }
@@ -388,12 +374,7 @@ async fn main() {
                 continue;
             }
             let accent = interlamina_accent(inter_i, num_interlaminas.max(1));
-            let stroke = Color::new(
-                accent.r * 0.92,
-                accent.g * 0.92,
-                accent.b * 0.92,
-                0.92,
-            );
+            let stroke = Color::new(accent.r * 0.92, accent.g * 0.92, accent.b * 0.92, 0.92);
             let line_w = 4.25_f32;
             let inter = &navmesher.laminate().interlaminas()[inter_i];
             let polygon_set = inter.primary();

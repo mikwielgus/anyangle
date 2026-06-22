@@ -6,10 +6,7 @@ use std::ops::{Add, Div};
 
 use i_triangle::{
     float::triangulatable::Triangulatable,
-    i_overlay::{
-        i_float::int::point::IntPoint,
-        i_shape::int::shape::IntShapes,
-    },
+    i_overlay::{i_float::int::point::IntPoint, i_shape::int::shape::IntShapes},
     int::triangulatable::IntTriangulatable,
 };
 use num_traits::One;
