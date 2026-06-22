@@ -16,5 +16,5 @@ pub trait Remesh<K>: Navmesh<K> {
         &mut self,
         shapes_per_layer: impl Iterator<Item = Vec<Vec<Vec<[K; 2]>>>> + core::iter::ExactSizeIterator,
     );
-    // TODO: Remesh single layer.
+    fn remesh_at(&mut self, layer_index: usize, shapes: Vec<Vec<Vec<[K; 2]>>>);
 }

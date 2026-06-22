@@ -159,7 +159,7 @@ macro_rules! impl_remesh_float {
                 shapes_per_layer: impl Iterator<Item = Vec<Vec<Vec<[$k; 2]>>>> + ExactSizeIterator,
             ) {
                 let boundary_id = DelaunayTriangleId::new(usize::MAX, usize::MAX);
-                reserve_navmesh_layer(&mut self.layers, shapes_per_layer.len());
+                reserve_navmesh_layer(&mut self.layers, shapes_per_layer.len() - 1);
 
                 for (layer_index, (shapes, layer)) in
                     shapes_per_layer.zip(self.layers.iter_mut()).enumerate()
@@ -179,6 +179,24 @@ macro_rules! impl_remesh_float {
                     );
                 }
             }
+            fn remesh_at(&mut self, layer_index: usize, shapes: Vec<Vec<Vec<[$k; 2]>>>) {
+                let boundary_id = DelaunayTriangleId::new(usize::MAX, usize::MAX);
+                reserve_navmesh_layer(&mut self.layers, layer_index);
+
+                let triangulation = shapes.as_slice().triangulate().into_delaunay();
+                let points = triangulation.points();
+                let indices = triangulation.triangle_indices::<usize>();
+                let neighbors = triangulation.triangle_neighbors();
+
+                store_delaunay_in_navmesh_layer(
+                    &mut self.layers[layer_index],
+                    layer_index,
+                    boundary_id,
+                    points.as_slice(),
+                    &indices,
+                    neighbors,
+                );
+            }
         }
     };
 }
@@ -191,7 +209,7 @@ macro_rules! impl_remesh_int {
                 shapes_per_layer: impl Iterator<Item = Vec<Vec<Vec<[$k; 2]>>>> + ExactSizeIterator,
             ) {
                 let boundary_id = DelaunayTriangleId::new(usize::MAX, usize::MAX);
-                reserve_navmesh_layer(&mut self.layers, shapes_per_layer.len());
+                reserve_navmesh_layer(&mut self.layers, shapes_per_layer.len() - 1);
 
                 for (layer_index, (shapes, layer)) in
                     shapes_per_layer.zip(self.layers.iter_mut()).enumerate()
@@ -228,6 +246,42 @@ macro_rules! impl_remesh_int {
                         neighbors,
                     );
                 }
+            }
+            fn remesh_at(&mut self, layer_index: usize, shapes: Vec<Vec<Vec<[$k; 2]>>>) {
+                let boundary_id = DelaunayTriangleId::new(usize::MAX, usize::MAX);
+                reserve_navmesh_layer(&mut self.layers, layer_index);
+
+                let int_shapes: IntShapes<_> = shapes
+                    .iter()
+                    .map(|shape| {
+                        shape
+                            .iter()
+                            .map(|contour| {
+                                contour
+                                    .iter()
+                                    .map(|p| IntPoint::new(p[0] as i32, p[1] as i32))
+                                    .collect()
+                            })
+                            .collect()
+                    })
+                    .collect();
+
+                let triangulation = int_shapes.triangulate().into_delaunay();
+                let points = triangulation.points();
+                let indices = triangulation.triangle_indices::<usize>();
+                let neighbors = triangulation.triangle_neighbors();
+
+                let corner_positions: Vec<[$k; 2]> =
+                    points.iter().map(|p| [p.x as $k, p.y as $k]).collect();
+
+                store_delaunay_in_navmesh_layer(
+                    &mut self.layers[layer_index],
+                    layer_index,
+                    boundary_id,
+                    corner_positions.as_slice(),
+                    &indices,
+                    neighbors,
+                );
             }
         }
     };
