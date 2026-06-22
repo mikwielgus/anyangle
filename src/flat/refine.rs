@@ -4,7 +4,7 @@
 //! Refinement methods for batches of obstacles
 
 use approx::AbsDiffEq;
-use core::slice;
+use core::{fmt, slice};
 use i_triangle::i_overlay::{
     core::{
         extract::BooleanExtractionBuffer,
@@ -24,10 +24,23 @@ use std::{collections::BTreeMap, ops::ControlFlow};
 
 use crate::flat::{GetLayerIds, LayerIds, MultiLayerNavmesh, Topo2DComplex};
 
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, PartialEq, Eq)]
 pub struct Face<Scalar: IntNumber, T> {
-    contour: Vec<IntPoint<Scalar>>,
-    data: T,
+    pub contour: Vec<IntPoint<Scalar>>,
+    pub data: T,
+}
+
+impl<Scalar, T> fmt::Debug for Face<Scalar, T>
+where
+    Scalar: IntNumber + fmt::Debug,
+    T: fmt::Debug,
+{
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("Face")
+            .field("contour", &format_args!("{:?}", self.contour))
+            .field("data", &self.data)
+            .finish()
+    }
 }
 
 impl<Scalar: IntNumber + RTreeNum, T> RTreeObject for Face<Scalar, T> {
@@ -48,6 +61,18 @@ impl<Scalar: IntNumber + RTreeNum, T> RTreeObject for Face<Scalar, T> {
 pub struct Tesselation<Scalar: IntNumber + RTreeNum, T, Params: RTreeParams = rstar::DefaultParams>
 {
     rtree: RTree<Face<Scalar, T>, Params>,
+}
+
+impl<Scalar, T, Params> fmt::Debug for Tesselation<Scalar, T, Params>
+where
+    Scalar: IntNumber + RTreeNum,
+    T: fmt::Debug,
+    Params: RTreeParams,
+{
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "Tesselation ")?;
+        f.debug_set().entries(self.rtree.iter()).finish()
+    }
 }
 
 impl<Scalar, T, Params> Default for Tesselation<Scalar, T, Params>
@@ -271,7 +296,6 @@ where
     }
 
     /// The returned value should be (if any) of the form `[left vertex, right vertex]`, i.e. ordered clockwise.
-    #[allow(unused)]
     fn portal_between(
         &self,
         face_from: Self::FaceId,
@@ -301,7 +325,7 @@ where
             return None;
         };
         // `clip_path` already seems to produce a CW result from a CCW input.
-        Some([x, y].map(|i| [i.x, i.y]))
+        Some([y, x].map(|i| [i.x, i.y]))
     }
 }
 

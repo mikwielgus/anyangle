@@ -10,7 +10,8 @@ use num_traits::Num;
 mod layer;
 pub use layer::{GetLayerIds, Iter as LayerIdsIter, LayerIds};
 
-pub mod refine;
+mod refine;
+pub use refine::{Face, Tesselation};
 
 pub trait Topo2DComplex {
     type VertexId: Sized + Copy + Eq + Ord;
