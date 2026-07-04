@@ -34,28 +34,33 @@ where
 
     pub fn advance(&mut self, portal: [[K; 2]; 2]) -> Option<([K; 2], [K; 2])> {
         let apex = &mut self.apex;
-        let mut update_vertex =
-            |ahs: &mut [K; 2], bhs: &mut [K; 2], bportal: &[K; 2], flip: bool| -> Option<([K; 2], [K; 2])> {
-                let comp = |v: K| if flip {
+        let mut update_vertex = |ahs: &mut [K; 2],
+                                 bhs: &mut [K; 2],
+                                 bportal: &[K; 2],
+                                 flip: bool|
+         -> Option<([K; 2], [K; 2])> {
+            let comp = |v: K| {
+                if flip {
                     v > K::default()
                 } else {
                     v < K::default()
-                };
-                if !comp(triarea2(&apex, &bhs, bportal)) {
-                    if approx_eq(&apex, &bhs, self.epsilon.clone())
-                        || comp(triarea2(&apex, &ahs, bportal))
-                    {
-                        // Tighten the funnel
-                        *bhs = bportal.clone();
-                    } else {
-                        // B over A, insert A to path and restart scan from portal A point
-                        let old_apex = mem::replace(apex, (*ahs).clone());
-                        *bhs = apex.clone();
-                        return Some((old_apex, (*apex).clone()));
-                    }
                 }
-                None
             };
+            if !comp(triarea2(&apex, &bhs, bportal)) {
+                if approx_eq(&apex, &bhs, self.epsilon.clone())
+                    || comp(triarea2(&apex, &ahs, bportal))
+                {
+                    // Tighten the funnel
+                    *bhs = bportal.clone();
+                } else {
+                    // B over A, insert A to path and restart scan from portal A point
+                    let old_apex = mem::replace(apex, (*ahs).clone());
+                    *bhs = apex.clone();
+                    return Some((old_apex, (*apex).clone()));
+                }
+            }
+            None
+        };
 
         // Update right vertex
         if let Some(ret) = update_vertex(&mut self.lhs, &mut self.rhs, &portal[1], false) {
