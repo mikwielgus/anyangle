@@ -93,7 +93,7 @@ fn shapes_per_layer<K: RTreeNum, D>(
     laminate: &Laminate<K, PolygonWithData<K, D>>,
     row: usize,
     subrow: usize,
-) -> impl Iterator<Item = Vec<Vec<Vec<[K; 2]>>>> + ExactSizeIterator + '_ {
+) -> impl ExactSizeIterator<Item = Vec<Vec<Vec<[K; 2]>>>> + '_ {
     laminate
         .laminas()
         .iter()

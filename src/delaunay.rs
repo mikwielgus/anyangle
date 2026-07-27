@@ -156,7 +156,7 @@ macro_rules! impl_remesh_float {
         impl Remesh<$k> for DelaunayNavmesh<$k> {
             fn remesh(
                 &mut self,
-                shapes_per_layer: impl Iterator<Item = Vec<Vec<Vec<[$k; 2]>>>> + ExactSizeIterator,
+                shapes_per_layer: impl ExactSizeIterator<Item = Vec<Vec<Vec<[$k; 2]>>>>,
             ) {
                 let boundary_id = DelaunayTriangleId::new(usize::MAX, usize::MAX);
                 reserve_navmesh_layer(&mut self.layers, shapes_per_layer.len() - 1);
@@ -206,7 +206,7 @@ macro_rules! impl_remesh_int {
         impl Remesh<$k> for DelaunayNavmesh<$k> {
             fn remesh(
                 &mut self,
-                shapes_per_layer: impl Iterator<Item = Vec<Vec<Vec<[$k; 2]>>>> + ExactSizeIterator,
+                shapes_per_layer: impl ExactSizeIterator<Item = Vec<Vec<Vec<[$k; 2]>>>>,
             ) {
                 let boundary_id = DelaunayTriangleId::new(usize::MAX, usize::MAX);
                 reserve_navmesh_layer(&mut self.layers, shapes_per_layer.len() - 1);
