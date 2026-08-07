@@ -8,6 +8,7 @@ version = "0.1.0"
 edition = "2024"
 
 [dependencies]
+approx = ">= 0.4.0, < 0.6.0"
 i_triangle = { git = "https://github.com/iShape-Rust/iTriangle" }
 num-traits = "0.2"
 polygon_unionfind = { version = "0.8", features = ["undoredo"] }

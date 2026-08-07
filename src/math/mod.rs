@@ -2,11 +2,7 @@
 //
 // SPDX-License-Identifier: MIT OR Apache-2.0
 
-use core::{
-    cmp::PartialOrd,
-    ops::{Mul, Sub},
-};
-use num_traits::sign::Signed;
+use core::ops::{Mul, Sub};
 
 /// Calculates the oriented area between 3 points
 pub fn triarea2<K>(a: &[K; 2], b: &[K; 2], c: &[K; 2]) -> K
@@ -30,12 +26,4 @@ where
     K: Clone + Sub<Output = K>,
 {
     [a[0].clone() - b[0].clone(), a[1].clone() - b[1].clone()]
-}
-
-pub(crate) fn approx_eq<K>(a: &[K; 2], b: &[K; 2], epsilon: K) -> bool
-where
-    K: Clone + Sub<Output = K> + Signed + PartialOrd,
-{
-    let d = delta(a, b);
-    d[0].abs() <= epsilon && d[1].abs() <= epsilon
 }
