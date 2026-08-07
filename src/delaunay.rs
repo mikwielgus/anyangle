@@ -78,9 +78,7 @@ impl<K: Add<K, Output = K> + Clone + One + Div<K, Output = K>> Navmesh<K> for De
     type NavnodeId = DelaunayTriangleId;
 
     fn adjacents(&self, node: DelaunayTriangleId) -> Vec<DelaunayTriangleId> {
-        self.layers[node.layer()].triangulation.adjacents[node.index()]
-            .clone()
-            .to_vec()
+        self.layers[node.layer()].triangulation.adjacents[node.index()].to_vec()
     }
 
     fn upward_stitches(&self, node: DelaunayTriangleId) -> Vec<([K; 2], DelaunayTriangleId)> {
@@ -128,18 +126,15 @@ fn store_delaunay_in_navmesh_layer<K: Copy>(
         vertices: triangle_indices
             .chunks_exact(3)
             .map(|triangle| {
-                [
-                    corner_positions[triangle[0]],
-                    corner_positions[triangle[1]],
-                    corner_positions[triangle[2]],
-                ]
+                <&[_; 3]>::try_from(triangle)
+                    .unwrap()
+                    .map(|i| corner_positions[i])
             })
             .collect(),
         adjacents: triangle_neighbors
             .into_iter()
             .map(|n| {
-                std::array::from_fn(|i| {
-                    let neighbor_index = n[i];
+                n.map(|neighbor_index| {
                     if neighbor_index == usize::MAX {
                         boundary_id
                     } else {
