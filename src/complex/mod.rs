@@ -9,7 +9,7 @@ use crate::LayerIds;
 pub trait Topo2DComplex {
     type VertexId: Sized + Copy + Eq;
     type FaceId: Sized + Copy + Eq + Ord;
-    type Scalar: Sized + Clone + Default + num_traits::Signed + PartialOrd;
+    type Scalar: Sized + Clone + num_traits::Num + PartialOrd;
 
     fn vertex_position(&self, vertex: Self::VertexId) -> [Self::Scalar; 2];
 
