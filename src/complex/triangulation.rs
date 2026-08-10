@@ -81,13 +81,15 @@ impl<S> TriangulationNavmesh<S> {
 
         let triangles: Vec<_> = itria
             .triangle_indices()
-            .chunks_exact(3)
+            .as_chunks::<3>()
+            .0
+            .iter()
             .zip(itria.triangle_neighbors())
             .map(|(vertices, mut neighbors)| {
-                let mut vertices = <[usize; 3]>::try_from(vertices).unwrap();
+                let mut vertices = *vertices;
                 // the vertices are always either clockwise or counter-clockwise
                 // swap their order if they're clockwise.
-                let contour = vertices.map(|i| itria.points()[i]);
+                let contour: [IntPoint<_>; 3] = vertices.map(|i| itria.points()[i]);
                 let points = contour.map(|i| [i.x, i.y]);
                 if matches!(
                     math::poly_convex_hull_rotation_sense(&points.map(|i| (i, ())), 0,),
