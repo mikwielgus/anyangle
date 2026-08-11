@@ -8,6 +8,7 @@ mod layer;
 pub mod math;
 mod navmesh;
 mod navmesher;
+pub mod refine;
 
 pub use delaunay::{
     DelaunayNavmesh, DelaunayNavmeshLayer, DelaunayTriangleId, DelaunayTriangulation,
