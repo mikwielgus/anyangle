@@ -94,6 +94,16 @@ where
         }
     }
 
+    /// ## Well-formed `portal`s
+    ///
+    /// Note that consecutive `portal`s, and the current portal formed by `[self.lhs, self.rhs]`
+    /// and the currently passed `portal` aren't allowed to intersect anywhere except at their
+    /// endpoints, otherwise this calculation breaks down / yields usless results.
+    ///
+    /// If routing across the faces of some subdivision of 2D space, this means passing
+    /// edges of a _single_ triangulation (with faces being triangles) yields valid funnels,
+    /// and similarly, using 2D polygonal complices (complexes) with convex faces and passing
+    /// their edges into this method also works.
     pub fn advance(&mut self, portal: [([K; 2], D); 2]) -> Option<(([K; 2], D), &([K; 2], D))> {
         let apex = &mut self.apex;
         /*
