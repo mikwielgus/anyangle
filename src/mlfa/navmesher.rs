@@ -10,7 +10,7 @@ use polygon_unionfind::{
 };
 use rstar::RTreeNum;
 
-use crate::navmesh::Remesh;
+use super::Remesh;
 
 pub struct Navmesher<K: RTreeNum, N, D> {
     laminate: Laminate<K, PolygonWithData<K, D>>,

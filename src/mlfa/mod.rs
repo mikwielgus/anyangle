@@ -2,6 +2,15 @@
 //
 // SPDX-License-Identifier: MIT OR Apache-2.0
 
+mod delaunay;
+mod navmesher;
+
+pub use delaunay::{
+    DelaunayNavmesh, DelaunayNavmeshLayer, DelaunayTriangleId, DelaunayTriangulation,
+};
+pub use navmesher::Navmesher;
+pub use polygon_unionfind::{Laminate, PolygonWithData, Rings};
+
 pub trait Navmesh<K> {
     type NavnodeId;
 

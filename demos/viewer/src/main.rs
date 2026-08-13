@@ -5,7 +5,7 @@
 // Programming of this file was entirely done by prompting Cursor Composer 2.0
 // Fast.
 
-use anyangle::{DelaunayNavmesh, Navmesher, PolygonWithData, Rings};
+use anyangle::mlfa::{DelaunayNavmesh, Navmesher, PolygonWithData, Rings};
 use macroquad::prelude::*;
 use macroquad::rand::gen_range;
 

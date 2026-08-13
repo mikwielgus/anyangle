@@ -12,7 +12,7 @@ use i_triangle::{
 };
 use num_traits::One;
 
-use crate::navmesh::{Navmesh, Remesh};
+use super::{Navmesh, Remesh};
 
 #[derive(Clone, Copy, Debug, Eq, Ord, PartialEq, PartialOrd)]
 pub struct DelaunayTriangleId {
