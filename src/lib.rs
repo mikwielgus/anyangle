@@ -12,7 +12,7 @@ mod navmesher;
 pub use delaunay::{
     DelaunayNavmesh, DelaunayNavmeshLayer, DelaunayTriangleId, DelaunayTriangulation,
 };
-pub use layer::{GetLayers, LayerId, LayerIds};
+pub use layer::{GetLayerIds, LayerId, LayerIds};
 pub use navmesh::{Navmesh, Remesh};
 pub use navmesher::Navmesher;
 pub use polygon_unionfind::{Laminate, PolygonWithData, Rings};

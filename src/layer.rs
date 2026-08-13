@@ -9,29 +9,29 @@ pub struct LayerId(pub usize);
 
 #[derive(Clone, Debug, Default, PartialEq, Eq)]
 #[cfg_attr(feature = "serde", derive(serde::Deserialize, serde::Serialize))]
-#[cfg_attr(feature = "serde", serde(from = "LayersSer", into = "LayersSer"))]
+#[cfg_attr(feature = "serde", serde(from = "LayerIdsSer", into = "LayerIdsSer"))]
 pub struct LayerIds(pub bit_set::BitSet);
 
 #[cfg_attr(feature = "serde", derive(serde::Deserialize, serde::Serialize))]
-struct LayersSer(Vec<usize>);
+struct LayerIdsSer(Vec<usize>);
 
-impl From<LayerIds> for LayersSer {
+impl From<LayerIds> for LayerIdsSer {
     fn from(x: LayerIds) -> Self {
         Self(x.0.iter().collect())
     }
 }
 
-impl From<LayersSer> for LayerIds {
-    fn from(x: LayersSer) -> Self {
+impl From<LayerIdsSer> for LayerIds {
+    fn from(x: LayerIdsSer) -> Self {
         x.0.iter().copied().map(LayerId).collect()
     }
 }
 
-pub trait GetLayers {
+pub trait GetLayerIds {
     fn layers(&self) -> LayerIds;
 }
 
-impl GetLayers for LayerId {
+impl GetLayerIds for LayerId {
     fn layers(&self) -> LayerIds {
         let mut ret = LayerIds::default();
         ret.insert(*self);
@@ -39,7 +39,7 @@ impl GetLayers for LayerId {
     }
 }
 
-impl GetLayers for LayerIds {
+impl GetLayerIds for LayerIds {
     fn layers(&self) -> LayerIds {
         self.clone()
     }
