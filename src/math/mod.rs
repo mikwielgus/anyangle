@@ -1,11 +1,66 @@
 // SPDX-FileCopyrightText: 2026 anyangle contributors
+// SPDX-FileCopyrightText: 2025 Topola contributors
 //
 // SPDX-License-Identifier: MIT OR Apache-2.0
 
 use core::{
-    cmp::Ordering,
+    cmp::{Ordering, PartialOrd},
     ops::{Mul, Sub},
 };
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
+pub enum RotationSense {
+    Counterclockwise,
+    Clockwise,
+}
+
+impl core::ops::Neg for RotationSense {
+    type Output = Self;
+
+    fn neg(self) -> Self {
+        match self {
+            RotationSense::Counterclockwise => RotationSense::Clockwise,
+            RotationSense::Clockwise => RotationSense::Counterclockwise,
+        }
+    }
+}
+
+impl RotationSense {
+    /// move `pos` by `step` along `self` assuming the list of positions is ordered CCW.
+    pub fn step_ccw(self, pos: usize, len: usize, mut step: usize) -> usize {
+        step %= len;
+        (match self {
+            RotationSense::Counterclockwise => pos + step,
+            RotationSense::Clockwise => len + pos - step,
+        }) % len
+    }
+}
+
+pub fn poly_convex_hull_rotation_sense<S, I>(
+    poly_ext_hull: &[([S; 2], I)],
+    pivot: usize,
+) -> RotationSense
+where
+    S: Clone + PartialOrd + num_traits::Num,
+{
+    let len = poly_ext_hull.len();
+    assert!(pivot < 5);
+
+    let prev = &poly_ext_hull[(len + pivot - 1) % len].0;
+    let curr = &poly_ext_hull[pivot].0;
+    let next = &poly_ext_hull[(pivot + 1) % len].0;
+
+    // see also: https://en.wikipedia.org/w/index.php?title=Curve_orientation&oldid=1250027587#Orientation_of_a_simple_polygon
+    #[rustfmt::skip]
+    let det = (curr[0].clone() * next[1].clone() + prev[0].clone() * curr[1].clone() + prev[1].clone() * next[0].clone())
+            - (curr[1].clone() * next[0].clone() + prev[1].clone() * curr[0].clone() + prev[0].clone() * next[1].clone());
+
+    if det < S::zero() {
+        RotationSense::Clockwise
+    } else {
+        RotationSense::Counterclockwise
+    }
+}
 
 /// Calculates the oriented area between 3 points
 pub fn triarea2<K>(a: &[K; 2], b: &[K; 2], c: &[K; 2]) -> K

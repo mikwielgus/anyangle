@@ -6,7 +6,6 @@
 use core::{cmp::PartialOrd, fmt, mem};
 
 use approx::AbsDiffEq;
-use num_traits::sign::Signed;
 
 use crate::math::*;
 
@@ -81,7 +80,7 @@ where
 
 impl<K, D> SimpleFunnel<K, D>
 where
-    K: AbsDiffEq + Clone + Default + Signed + PartialOrd,
+    K: AbsDiffEq + Clone + num_traits::Num + PartialOrd,
     <K as AbsDiffEq>::Epsilon: Clone,
     D: Clone,
 {
@@ -115,11 +114,7 @@ where
         macro_rules! update_vertex {
             ($ahs:expr, $bhs:expr, $bportal:expr, $flip:expr) => {{
                 let comp = |v: K| {
-                    if $flip {
-                        v > K::default()
-                    } else {
-                        v < K::default()
-                    }
+                    if $flip { v > K::zero() } else { v < K::zero() }
                 };
                 if !comp(triarea2(&apex.0, &$bhs.0, &$bportal.0)) {
                     if apex.0.abs_diff_eq(&$bhs.0, self.epsilon.clone())
