@@ -17,11 +17,13 @@ use rstar::{AABB, RTree, RTreeNum, RTreeObject, RTreeParams};
 
 use super::{LayerId, LayerIds};
 
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Obstacle<Scalar: IntNumber> {
     shape: Vec<Vec<IntPoint<Scalar>>>,
     layers: LayerIds,
 }
 
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub struct ConvexObstacle<Scalar: IntNumber> {
     contour: Vec<IntPoint<Scalar>>,
     layers: LayerIds,
@@ -140,4 +142,44 @@ pub fn make_non_overlapping_and_convex<
         }));
     }
     ret.0
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    use crate::flat::layer::LayerId;
+    use i_triangle::i_overlay::i_shape::int_path;
+
+    #[test]
+    fn two_rectangles() {
+        let mut rtree = RTree::new();
+        rtree.insert(Obstacle {
+            shape: vec![int_path![[0i32, 0], [2, 0], [2, 2], [0, 2]]],
+            layers: {
+                let mut layers = LayerIds::default();
+                layers.insert(LayerId(0));
+                layers
+            },
+        });
+        rtree.insert(Obstacle {
+            shape: vec![int_path![[1i32, 1], [3, 1], [3, 3], [1, 3]]],
+            layers: {
+                let mut layers = LayerIds::default();
+                layers.insert(LayerId(1));
+                layers
+            },
+        });
+
+        let refined = make_non_overlapping_and_convex(rtree);
+        assert!(refined.contains(&ConvexObstacle {
+            contour: int_path![[2i32, 2], [1, 2], [1, 1], [2, 1]],
+            layers: {
+                let mut layers = LayerIds::default();
+                layers.insert(LayerId(0));
+                layers.insert(LayerId(1));
+                layers
+            },
+        }));
+    }
 }

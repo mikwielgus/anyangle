@@ -2,15 +2,23 @@
 //
 // SPDX-License-Identifier: MIT OR Apache-2.0
 
+use core::fmt;
+
 #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
 #[cfg_attr(feature = "serde", derive(serde::Deserialize, serde::Serialize))]
 #[cfg_attr(feature = "serde", serde(transparent))]
 pub struct LayerId(pub usize);
 
-#[derive(Clone, Debug, Default, PartialEq, Eq)]
+#[derive(Clone, Default, PartialEq, Eq)]
 #[cfg_attr(feature = "serde", derive(serde::Deserialize, serde::Serialize))]
 #[cfg_attr(feature = "serde", serde(from = "LayerIdsSer", into = "LayerIdsSer"))]
 pub struct LayerIds(pub bit_set::BitSet);
+
+impl fmt::Debug for LayerIds {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "LayerIds {}", self.0)
+    }
+}
 
 #[cfg_attr(feature = "serde", derive(serde::Deserialize, serde::Serialize))]
 struct LayerIdsSer(Vec<usize>);
