@@ -130,12 +130,10 @@ fn store_delaunay_in_navmesh_layer<K: Copy>(
 ) {
     layer.triangulation = DelaunayTriangulation {
         vertices: triangle_indices
-            .chunks_exact(3)
-            .map(|triangle| {
-                <&[_; 3]>::try_from(triangle)
-                    .unwrap()
-                    .map(|i| corner_positions[i])
-            })
+            .as_chunks::<3>()
+            .0
+            .iter()
+            .map(|triangle| triangle.map(|i| corner_positions[i]))
             .collect(),
         adjacents: triangle_neighbors
             .into_iter()
