@@ -2,12 +2,9 @@
 //
 // SPDX-License-Identifier: MIT OR Apache-2.0
 
-use core::fmt;
+use core::{fmt, ops};
 
-#[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
-#[cfg_attr(feature = "serde", derive(serde::Deserialize, serde::Serialize))]
-#[cfg_attr(feature = "serde", serde(transparent))]
-pub struct LayerId(pub usize);
+use crate::LayerId;
 
 #[derive(Clone, Default, PartialEq, Eq)]
 #[cfg_attr(feature = "serde", derive(serde::Deserialize, serde::Serialize))]
@@ -31,7 +28,7 @@ impl From<LayerIds> for LayerIdsSer {
 
 impl From<LayerIdsSer> for LayerIds {
     fn from(x: LayerIdsSer) -> Self {
-        x.0.iter().copied().map(LayerId).collect()
+        Self(x.0.iter().copied().collect())
     }
 }
 
@@ -55,15 +52,15 @@ impl GetLayerIds for LayerIds {
 
 impl LayerIds {
     pub fn insert(&mut self, i: LayerId) {
-        self.0.insert(i.0);
+        self.0.insert(i.into());
     }
 
     pub fn remove(&mut self, i: LayerId) {
-        self.0.remove(i.0);
+        self.0.remove(i.into());
     }
 
     pub fn iter(&self) -> impl Iterator<Item = LayerId> + '_ {
-        self.0.iter().map(LayerId)
+        self.0.iter().map(LayerId::from)
     }
 
     pub fn bounding_range(&self) -> Option<core::ops::Range<usize>> {
@@ -77,24 +74,25 @@ impl LayerIds {
 
     pub fn adjacent_layers_to(&self, i: LayerId) -> Vec<LayerId> {
         let mut ret = Vec::new();
+        let iu: usize = i.into();
 
-        if let Some(j) = i.0.checked_sub(1)
+        if let Some(j) = iu.checked_sub(1)
             && self.0.contains(j)
         {
-            ret.push(LayerId(j));
+            ret.push(LayerId::from(j));
         }
 
-        if let Some(j) = i.0.checked_add(1)
+        if let Some(j) = iu.checked_add(1)
             && self.0.contains(j)
         {
-            ret.push(LayerId(j));
+            ret.push(LayerId::from(j));
         }
 
         ret
     }
 
     pub fn is_on_layer(&self, l: LayerId) -> bool {
-        self.0.contains(l.0)
+        self.0.contains(l.into())
     }
 }
 
@@ -143,5 +141,47 @@ impl<'a> FromIterator<&'a LayerIds> for LayerIds {
         let mut this = Self::default();
         this.extend(iter);
         this
+    }
+}
+
+impl<'a> ops::BitAnd for &'a LayerIds {
+    type Output = LayerIds;
+
+    fn bitand(self, rhs: Self) -> LayerIds {
+        LayerIds(self.0.intersection(&rhs.0).collect())
+    }
+}
+
+impl<'a> ops::BitAndAssign<&'a LayerIds> for LayerIds {
+    fn bitand_assign(&mut self, rhs: &'a LayerIds) {
+        self.0.intersect_with(&rhs.0);
+    }
+}
+
+impl<'a> ops::BitOr for &'a LayerIds {
+    type Output = LayerIds;
+
+    fn bitor(self, rhs: Self) -> LayerIds {
+        LayerIds(self.0.union(&rhs.0).collect())
+    }
+}
+
+impl<'a> ops::BitOrAssign<&'a LayerIds> for LayerIds {
+    fn bitor_assign(&mut self, rhs: &'a LayerIds) {
+        self.0.union_with(&rhs.0);
+    }
+}
+
+impl<'a> ops::BitXor for &'a LayerIds {
+    type Output = LayerIds;
+
+    fn bitxor(self, rhs: Self) -> LayerIds {
+        LayerIds(self.0.symmetric_difference(&rhs.0).collect())
+    }
+}
+
+impl<'a> ops::BitXorAssign<&'a LayerIds> for LayerIds {
+    fn bitxor_assign(&mut self, rhs: &'a LayerIds) {
+        self.0.symmetric_difference_with(&rhs.0);
     }
 }

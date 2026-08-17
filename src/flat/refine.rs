@@ -15,7 +15,7 @@ use i_triangle::i_overlay::{
 use i_triangle::int::triangulatable::IntTriangulatable as _;
 use rstar::{AABB, RTree, RTreeNum, RTreeObject, RTreeParams};
 
-use super::{LayerId, LayerIds};
+use super::LayerIds;
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Obstacle<Scalar: IntNumber> {
@@ -117,8 +117,7 @@ pub fn make_non_overlapping_and_convex<
                 continue;
             }
             // we have an intersection, process it
-            let inters2_layers: LayerIds =
-                i_layers.0.union(&inters.layers.0).map(LayerId).collect();
+            let inters2_layers: LayerIds = (&i_layers) | (&inters.layers);
             tmp.extend(inters2.into_iter().map(|shape| Obstacle {
                 shape,
                 layers: inters2_layers.clone(),
@@ -148,7 +147,7 @@ pub fn make_non_overlapping_and_convex<
 mod tests {
     use super::*;
 
-    use crate::flat::layer::LayerId;
+    use crate::LayerId;
     use i_triangle::i_overlay::i_shape::int_path;
 
     #[test]
@@ -158,7 +157,7 @@ mod tests {
             shape: vec![int_path![[0i32, 0], [2, 0], [2, 2], [0, 2]]],
             layers: {
                 let mut layers = LayerIds::default();
-                layers.insert(LayerId(0));
+                layers.insert(LayerId::from(0));
                 layers
             },
         });
@@ -166,7 +165,7 @@ mod tests {
             shape: vec![int_path![[1i32, 1], [3, 1], [3, 3], [1, 3]]],
             layers: {
                 let mut layers = LayerIds::default();
-                layers.insert(LayerId(1));
+                layers.insert(LayerId::from(1));
                 layers
             },
         });
@@ -176,8 +175,8 @@ mod tests {
             contour: int_path![[2i32, 2], [1, 2], [1, 1], [2, 1]],
             layers: {
                 let mut layers = LayerIds::default();
-                layers.insert(LayerId(0));
-                layers.insert(LayerId(1));
+                layers.insert(LayerId::from(0));
+                layers.insert(LayerId::from(1));
                 layers
             },
         }));
