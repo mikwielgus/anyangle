@@ -6,23 +6,23 @@
 #[cfg_attr(feature = "serde", derive(serde::Deserialize, serde::Serialize))]
 #[cfg_attr(feature = "serde", serde(transparent))]
 #[repr(transparent)]
-pub struct LayerId(usize);
+pub struct LayerId(u32);
 
 impl LayerId {
     pub const MIN: LayerId = LayerId(0);
-    pub const MAX: LayerId = LayerId(usize::MAX);
+    pub const MAX: LayerId = LayerId(u32::MAX);
 }
 
 impl From<usize> for LayerId {
     #[inline]
     fn from(x: usize) -> LayerId {
-        LayerId(x)
+        LayerId(x.try_into().unwrap())
     }
 }
 
 impl From<LayerId> for usize {
     #[inline]
     fn from(x: LayerId) -> usize {
-        x.0
+        x.0.try_into().unwrap()
     }
 }
