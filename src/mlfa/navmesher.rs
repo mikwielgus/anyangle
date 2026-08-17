@@ -79,9 +79,9 @@ where
         }
     }
 
-    pub fn insert_polygon(&mut self, layer: usize, polygon: PolygonWithData<K, D>) {
-        self.laminate.add_into_lamina(layer, polygon);
-        let lamina = &self.laminate.laminas()[layer];
+    pub fn insert_polygon(&mut self, layer: crate::LayerId, polygon: PolygonWithData<K, D>) {
+        self.laminate.add_into_lamina(usize::from(layer), polygon);
+        let lamina = &self.laminate.laminas()[usize::from(layer)];
 
         for (row, navmesh) in self.navmeshes.iter_mut().enumerate() {
             navmesh.remesh_at(layer, shapes_for_lamina(lamina, row, 0));

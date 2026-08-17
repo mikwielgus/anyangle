@@ -340,7 +340,7 @@ async fn main() {
                 let center = screen_to_world(mouse, origin, zoom);
                 let r_max = gen_range(28_i32, 96_i32);
                 let poly = random_convex_polygon(center, r_max, 9);
-                navmesher.insert_polygon(active_layer, poly);
+                navmesher.insert_polygon(active_layer.into(), poly);
             }
         }
 
