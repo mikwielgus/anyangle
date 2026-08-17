@@ -301,46 +301,37 @@ async fn main() {
         }
 
         if is_mouse_button_pressed(MouseButton::Left) {
-            let mut consumed = false;
-            for i in 0..n {
-                if layer_radio_contains(mouse, i) {
-                    active_layer = i;
-                    consumed = true;
-                    break;
+            'consumed: {
+                for i in 0..n {
+                    if layer_radio_contains(mouse, i) {
+                        active_layer = i;
+                        break 'consumed;
+                    }
                 }
-            }
-            if !consumed {
                 for i in 0..n {
                     if layer_visibility_toggle_rect(i).contains(mouse) {
                         layer_visible[i] = !layer_visible[i];
-                        consumed = true;
-                        break;
+                        break 'consumed;
                     }
                 }
-            }
-            if !consumed {
                 for r in 0..num_parallel_rows {
                     if row_radio_contains(mouse, n, r) {
                         active_parallel_row = r;
-                        consumed = true;
-                        break;
+                        break 'consumed;
                     }
                 }
-            }
-            if !consumed {
                 for i in 0..num_interlaminas {
                     if interlamina_panel_rect(n, num_parallel_rows, i).contains(mouse) {
                         interlamina_visible[i] = !interlamina_visible[i];
-                        consumed = true;
-                        break;
+                        break 'consumed;
                     }
                 }
-            }
-            if !consumed && !ui_blocks_click(mouse, n, num_parallel_rows, num_interlaminas) {
-                let center = screen_to_world(mouse, origin, zoom);
-                let r_max = gen_range(28_i32, 96_i32);
-                let poly = random_convex_polygon(center, r_max, 9);
-                navmesher.insert_polygon(active_layer.into(), poly);
+                if !ui_blocks_click(mouse, n, num_parallel_rows, num_interlaminas) {
+                    let center = screen_to_world(mouse, origin, zoom);
+                    let r_max = gen_range(28_i32, 96_i32);
+                    let poly = random_convex_polygon(center, r_max, 9);
+                    navmesher.insert_polygon(active_layer.into(), poly);
+                }
             }
         }
 
