@@ -308,9 +308,9 @@ async fn main() {
                         break 'consumed;
                     }
                 }
-                for i in 0..n {
+                for (i, lv) in layer_visible.iter_mut().enumerate() {
                     if layer_visibility_toggle_rect(i).contains(mouse) {
-                        layer_visible[i] = !layer_visible[i];
+                        *lv = !*lv;
                         break 'consumed;
                     }
                 }
@@ -320,9 +320,9 @@ async fn main() {
                         break 'consumed;
                     }
                 }
-                for i in 0..num_interlaminas {
+                for (i, ilv) in interlamina_visible.iter_mut().enumerate() {
                     if interlamina_panel_rect(n, num_parallel_rows, i).contains(mouse) {
-                        interlamina_visible[i] = !interlamina_visible[i];
+                        *ilv = !*ilv;
                         break 'consumed;
                     }
                 }
@@ -401,14 +401,14 @@ async fn main() {
         }
 
         draw_text(
-            &format!("layers: {} (semi-transparent overlay)", n),
+            format!("layers: {n} (semi-transparent overlay)"),
             12.0,
             24.0,
             22.0,
             LIGHTGRAY,
         );
         draw_text(
-            &format!("active lamina layer: {}", active_layer),
+            format!("active lamina layer: {active_layer}"),
             12.0,
             46.0,
             20.0,
@@ -422,9 +422,8 @@ async fn main() {
             GRAY,
         );
 
-        for i in 0..n {
+        for (i, &on) in layer_visible.iter().enumerate() {
             let r = layer_panel_rect(i);
-            let on = layer_visible[i];
             let accent = layer_color(i, n);
             let bg = if on {
                 Color::new(accent.r * 0.35, accent.g * 0.35, accent.b * 0.35, 0.92)
@@ -482,10 +481,9 @@ async fn main() {
                 GRAY,
             );
 
-            for i in 0..num_interlaminas {
+            for (i, &on) in interlamina_visible.iter().enumerate() {
                 let pr = interlamina_panel_rect(n, num_parallel_rows, i);
                 let accent = interlamina_accent(i, num_interlaminas);
-                let on = interlamina_visible[i];
                 let bg = if on {
                     Color::new(accent.r * 0.22, accent.g * 0.28, accent.b * 0.32, 0.92)
                 } else {
