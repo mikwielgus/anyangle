@@ -6,10 +6,12 @@ use core::{fmt, ops};
 
 use crate::LayerId;
 
+type BitBlock = u32;
+
 #[derive(Clone, Default, PartialEq, Eq)]
 #[cfg_attr(feature = "serde", derive(serde::Deserialize, serde::Serialize))]
 #[cfg_attr(feature = "serde", serde(from = "LayerIdsSer", into = "LayerIdsSer"))]
-pub struct LayerIds(pub bit_set::BitSet);
+pub struct LayerIds(pub bit_set::BitSet<BitBlock>);
 
 impl fmt::Debug for LayerIds {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
@@ -59,8 +61,8 @@ impl LayerIds {
         self.0.remove(i.into());
     }
 
-    pub fn iter(&self) -> impl Iterator<Item = LayerId> + '_ {
-        self.0.iter().map(LayerId::from)
+    pub fn iter(&self) -> Iter<'_> {
+        self.into_iter()
     }
 
     pub fn bounding_range(&self) -> Option<core::ops::Range<usize>> {
@@ -144,7 +146,7 @@ impl<'a> FromIterator<&'a LayerIds> for LayerIds {
     }
 }
 
-impl<'a> ops::BitAnd for &'a LayerIds {
+impl ops::BitAnd for &LayerIds {
     type Output = LayerIds;
 
     fn bitand(self, rhs: Self) -> LayerIds {
@@ -158,7 +160,7 @@ impl<'a> ops::BitAndAssign<&'a LayerIds> for LayerIds {
     }
 }
 
-impl<'a> ops::BitOr for &'a LayerIds {
+impl ops::BitOr for &LayerIds {
     type Output = LayerIds;
 
     fn bitor(self, rhs: Self) -> LayerIds {
@@ -172,7 +174,7 @@ impl<'a> ops::BitOrAssign<&'a LayerIds> for LayerIds {
     }
 }
 
-impl<'a> ops::BitXor for &'a LayerIds {
+impl ops::BitXor for &LayerIds {
     type Output = LayerIds;
 
     fn bitxor(self, rhs: Self) -> LayerIds {
@@ -183,5 +185,36 @@ impl<'a> ops::BitXor for &'a LayerIds {
 impl<'a> ops::BitXorAssign<&'a LayerIds> for LayerIds {
     fn bitxor_assign(&mut self, rhs: &'a LayerIds) {
         self.0.symmetric_difference_with(&rhs.0);
+    }
+}
+
+pub struct Iter<'a>(bit_set::Iter<'a, BitBlock>);
+
+impl<'a> Iterator for Iter<'a> {
+    type Item = LayerId;
+
+    #[inline]
+    fn next(&mut self) -> Option<Self::Item> {
+        self.0.next().map(LayerId::from)
+    }
+
+    #[inline]
+    fn count(self) -> usize {
+        self.0.count()
+    }
+
+    #[inline]
+    fn size_hint(&self) -> (usize, Option<usize>) {
+        self.0.size_hint()
+    }
+}
+
+impl<'a> IntoIterator for &'a LayerIds {
+    type Item = LayerId;
+    type IntoIter = Iter<'a>;
+
+    #[inline]
+    fn into_iter(self) -> Iter<'a> {
+        Iter((&self.0).into_iter())
     }
 }

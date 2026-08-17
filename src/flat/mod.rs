@@ -8,7 +8,7 @@ use approx::AbsDiffEq;
 use num_traits::Num;
 
 mod layer;
-pub use layer::{GetLayerIds, LayerIds};
+pub use layer::{GetLayerIds, Iter as LayerIdsIter, LayerIds};
 
 pub mod refine;
 
