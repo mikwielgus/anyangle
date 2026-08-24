@@ -37,6 +37,6 @@ pub trait Topo2DComplex {
     ) -> Option<[Self::VertexId; 2]>;
 }
 
-pub trait MultiLayerIdNavmesh: Topo2DComplex {
-    fn face_layers(&self, face: <Self as Topo2DComplex>::FaceId) -> &LayerIds;
+pub trait MultiLayerNavmesh: Topo2DComplex {
+    fn face_layers(&self, face: <Self as Topo2DComplex>::FaceId) -> LayerIds;
 }

@@ -8,7 +8,7 @@ use crate::LayerId;
 
 type BitBlock = u32;
 
-#[derive(Clone, Default, PartialEq, Eq)]
+#[derive(Clone, Default, PartialEq, Eq, PartialOrd, Ord)]
 #[cfg_attr(feature = "serde", derive(serde::Deserialize, serde::Serialize))]
 #[cfg_attr(feature = "serde", serde(from = "LayerIdsSer", into = "LayerIdsSer"))]
 pub struct LayerIds(pub bit_set::BitSet<BitBlock>);
