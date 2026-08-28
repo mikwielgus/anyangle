@@ -11,7 +11,7 @@ mod layer;
 pub use layer::{GetLayerIds, Iter as LayerIdsIter, LayerIds};
 
 mod refine;
-pub use refine::{Face, Tesselation};
+pub use refine::{Face, FrozenFace, FrozenFaceNeighbour, FrozenTesselation, Tesselation};
 
 pub trait Topo2DComplex {
     type VertexId: Sized + Copy + Eq + Ord;

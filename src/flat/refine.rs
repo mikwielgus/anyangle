@@ -358,6 +358,203 @@ where
     }
 }
 
+#[derive(Copy, Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
+pub struct FrozenFaceNeighbour {
+    pub face_id: u32,
+    pub portal_lhs: u32,
+    pub portal_rhs: u32,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct FrozenFace<T> {
+    pub contour: Box<[u32]>,
+    pub neighbours: Box<[FrozenFaceNeighbour]>,
+    pub data: T,
+}
+
+#[derive(Clone, Debug)]
+pub struct FrozenTesselation<Scalar, T> {
+    // INVARIANT: `vertices.len() <= usize::try_from(u32::MAX).unwrap()`
+    vertices: Box<[[Scalar; 2]]>,
+
+    // INVARIANT: `vertices.len() == vertex_adj_faces.len()`
+    vertex_adj_faces: Box<[Box<[u32]>]>,
+
+    // INVARIANT: `faces.len() <= usize::try_from(u32::MAX).unwrap()`
+    faces: Box<[FrozenFace<T>]>,
+}
+
+impl<Scalar, T> FrozenTesselation<Scalar, T> {
+    #[inline(always)]
+    pub fn vertices(&self) -> &[[Scalar; 2]] {
+        &self.vertices[..]
+    }
+
+    #[inline(always)]
+    pub fn faces(&self) -> &[FrozenFace<T>] {
+        &self.faces[..]
+    }
+}
+
+impl<Scalar, T, Params> Tesselation<Scalar, T, Params>
+where
+    Scalar: Copy + AbsDiffEq + IntNumber + RTreeNum + Ord + OverlayInt,
+    T: Clone,
+    Params: RTreeParams,
+{
+    pub fn freeze(&self) -> FrozenTesselation<Scalar, T> {
+        let max_slice_len = usize::try_from(u32::MAX).unwrap();
+
+        // create indices for all the vertices
+        let mut vertices: Vec<[Scalar; 2]> = self
+            .rtree
+            .iter()
+            .flat_map(|face| &face.contour[..])
+            .copied()
+            .collect();
+        vertices.sort_unstable();
+        vertices.dedup();
+        let vertices = vertices.into_boxed_slice();
+        assert!(vertices.len() <= max_slice_len);
+        // reverse mapping from vertices to indices
+        let vertices_rev: BTreeMap<_, _> = vertices
+            .iter()
+            .enumerate()
+            .map(|(id, vertex)| (*vertex, id as u32))
+            .collect();
+
+        // create indices for all the faces
+        let mut faces: Box<[_]> = self
+            .rtree
+            .iter()
+            .map(|face| FrozenFace {
+                contour: face.contour.iter().map(|i| vertices_rev[i]).collect(),
+                // this gets filled in the next paragraph
+                neighbours: Vec::new().into_boxed_slice(),
+                data: face.data.clone(),
+            })
+            .collect();
+        assert!(faces.len() <= max_slice_len);
+        // reverse mapping from face contours to indices
+        // this relies on `self.rtree.iter()` having stable iteration order
+        let faces_rev: BTreeMap<&[[Scalar; 2]], u32> = self
+            .rtree
+            .iter()
+            .enumerate()
+            .map(|(id, face)| (&face.contour[..], id as u32))
+            .collect();
+
+        // freeze of:
+        // - `Topo2DComplex::face_adjacent_faces`
+        // - `Topo2DComplex::vertex_adjacent_faces`
+        let mut vertex_adj_faces: Vec<Vec<u32>> = vec![Vec::new(); vertices.len()];
+        for (face_id, face) in faces.iter_mut().enumerate() {
+            let face_id = face_id as u32;
+
+            for &vertex in &face.contour {
+                vertex_adj_faces[vertex as usize].push(face_id);
+            }
+
+            let face_contour: Box<[_]> =
+                face.contour.iter().map(|&i| vertices[i as usize]).collect();
+            face.neighbours = self
+                .face_adjacent_faces(&face_contour)
+                .map(|neighbour| {
+                    // `face_adjacent_faces` already makes sure that the following
+                    // unwrap always succeeds.
+                    let [portal_lhs, portal_rhs] = self
+                        .portal_between(&face_contour, neighbour)
+                        .unwrap()
+                        .map(|vertex| vertices_rev[&vertex]);
+                    FrozenFaceNeighbour {
+                        face_id: faces_rev[neighbour],
+                        portal_lhs,
+                        portal_rhs,
+                    }
+                })
+                .collect();
+        }
+
+        let vertex_adj_faces: Box<[_]> = vertex_adj_faces
+            .into_iter()
+            .map(|mut face_ids| {
+                face_ids.sort_unstable();
+                face_ids.dedup();
+                face_ids.into_boxed_slice()
+            })
+            .collect();
+
+        FrozenTesselation {
+            vertices,
+            vertex_adj_faces,
+            faces,
+        }
+    }
+}
+
+impl<Scalar, T> Topo2DComplex for FrozenTesselation<Scalar, T>
+where
+    Scalar: Clone + AbsDiffEq + num_traits::Num + PartialOrd,
+{
+    type VertexId = u32;
+    type FaceId = u32;
+    type Scalar = Scalar;
+
+    #[inline]
+    fn vertex_position(&self, vertex: Self::VertexId) -> [Scalar; 2] {
+        self.vertices[vertex as usize].clone()
+    }
+
+    #[inline]
+    fn vertex_adjacent_faces(
+        &self,
+        vertex: Self::VertexId,
+    ) -> impl Iterator<Item = Self::FaceId> + '_ {
+        self.vertex_adj_faces[vertex as usize].iter().copied()
+    }
+
+    #[inline]
+    fn face_adjacent_vertices(
+        &self,
+        face: Self::FaceId,
+    ) -> impl Iterator<Item = Self::VertexId> + '_ {
+        self.faces[face as usize].contour.iter().copied()
+    }
+
+    #[inline]
+    fn face_adjacent_faces(&self, face: Self::FaceId) -> impl Iterator<Item = Self::FaceId> + '_ {
+        self.faces[face as usize]
+            .neighbours
+            .iter()
+            .map(|neigh| neigh.face_id)
+    }
+
+    #[inline]
+    /// The returned value should be (if any) of the form `[left vertex, right vertex]`, i.e. ordered clockwise.
+    fn portal_between(
+        &self,
+        face_from: Self::FaceId,
+        face_to: Self::FaceId,
+    ) -> Option<[Self::VertexId; 2]> {
+        self.faces[face_from as usize]
+            .neighbours
+            .iter()
+            .find(|neigh| neigh.face_id == face_to)
+            .map(|neigh| [neigh.portal_lhs, neigh.portal_rhs])
+    }
+}
+
+impl<Scalar, T> MultiLayerNavmesh for FrozenTesselation<Scalar, T>
+where
+    Scalar: Clone + AbsDiffEq + num_traits::Num + PartialOrd,
+    T: GetLayerIds,
+{
+    #[inline]
+    fn face_layers(&self, face: <Self as Topo2DComplex>::FaceId) -> LayerIds {
+        self.faces[face as usize].data.layers()
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
