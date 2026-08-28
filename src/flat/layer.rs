@@ -96,6 +96,34 @@ impl LayerIds {
     pub fn is_on_layer(&self, l: LayerId) -> bool {
         self.0.contains(l.into())
     }
+
+    pub fn closest_contained_layer_to(&self, l: LayerId) -> [Option<LayerId>; 2] {
+        if self.0.is_empty() {
+            return [None, None];
+        }
+
+        let mut ret = [Some(l), Some(l)];
+
+        loop {
+            if ret == [None, None] {
+                break ret;
+            }
+            let cur_matches =
+                ret.map(|attempt| attempt.map(|l| self.0.contains(l.into())).unwrap_or(false));
+            break match cur_matches {
+                [false, false] => {
+                    ret = [
+                        ret[0].and_then(|l| l.checked_sub(1)),
+                        ret[1].and_then(|l| l.checked_add(1)),
+                    ];
+                    continue;
+                }
+                [false, true] => [None, ret[1]],
+                [true, false] => [ret[0], None],
+                [true, true] => ret,
+            };
+        }
+    }
 }
 
 impl Extend<LayerId> for LayerIds {
@@ -216,5 +244,51 @@ impl<'a> IntoIterator for &'a LayerIds {
     #[inline]
     fn into_iter(self) -> Iter<'a> {
         Iter((&self.0).into_iter())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{LayerId, LayerIds};
+
+    #[test]
+    fn closest_layer_matches_already() {
+        let layers = [0, 1, 2]
+            .into_iter()
+            .map(LayerId::from)
+            .collect::<LayerIds>();
+        for i in &layers {
+            assert_eq!(layers.closest_contained_layer_to(i), [Some(i), Some(i)]);
+        }
+    }
+
+    #[test]
+    fn closest_layer_doesnt_match_already() {
+        let layers = [1, 2].into_iter().map(LayerId::from).collect::<LayerIds>();
+        assert_eq!(
+            layers.closest_contained_layer_to(LayerId::from(0)),
+            [None, Some(LayerId::from(1))]
+        );
+        assert_eq!(
+            layers.closest_contained_layer_to(LayerId::from(3)),
+            [Some(LayerId::from(2)), None]
+        );
+    }
+
+    #[test]
+    fn closest_layer_doesnt_match_already_middle() {
+        let layers = [0, 4].into_iter().map(LayerId::from).collect::<LayerIds>();
+        assert_eq!(
+            layers.closest_contained_layer_to(LayerId::from(2)),
+            [Some(LayerId::from(0)), Some(LayerId::from(4))]
+        );
+    }
+
+    #[test]
+    fn closest_layer_none() {
+        assert_eq!(
+            LayerIds::default().closest_contained_layer_to(LayerId::from(2)),
+            [None, None]
+        );
     }
 }

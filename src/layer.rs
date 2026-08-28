@@ -13,6 +13,16 @@ pub struct LayerId(u32);
 impl LayerId {
     pub const MIN: LayerId = LayerId(0);
     pub const MAX: LayerId = LayerId(u32::MAX);
+
+    #[inline]
+    pub fn checked_add(self, delta: usize) -> Option<Self> {
+        self.0.checked_add(u32::try_from(delta).ok()?).map(Self)
+    }
+
+    #[inline]
+    pub fn checked_sub(self, delta: usize) -> Option<Self> {
+        self.0.checked_sub(u32::try_from(delta).ok()?).map(Self)
+    }
 }
 
 impl fmt::Debug for LayerId {
