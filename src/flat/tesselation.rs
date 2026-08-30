@@ -3,8 +3,9 @@
 // SPDX-License-Identifier: MIT OR Apache-2.0
 //! Refinement methods for batches of obstacles
 
+use alloc::{boxed::Box, collections::BTreeMap, vec, vec::Vec};
 use approx::AbsDiffEq;
-use core::{fmt, slice};
+use core::{fmt, ops::ControlFlow, slice};
 use i_triangle::i_overlay::{
     core::{
         extract::BooleanExtractionBuffer,
@@ -20,7 +21,6 @@ use i_triangle::i_overlay::{
 };
 use i_triangle::int::triangulatable::IntTriangulatable as _;
 use rstar::{AABB, RTree, RTreeNum, RTreeObject, RTreeParams};
-use std::{collections::BTreeMap, ops::ControlFlow};
 
 use crate::flat::{GetLayerIds, LayerIds, MultiLayerNavmesh, Topo2DComplex};
 

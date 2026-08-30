@@ -5,6 +5,8 @@
 mod delaunay;
 mod navmesher;
 
+use alloc::vec::Vec;
+
 pub use delaunay::{
     DelaunayNavmesh, DelaunayNavmeshLayer, DelaunayTriangleId, DelaunayTriangulation,
 };

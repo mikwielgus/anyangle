@@ -2,8 +2,11 @@
 //
 // SPDX-License-Identifier: MIT OR Apache-2.0
 
-use core::iter::{ExactSizeIterator, repeat_n};
-use core::ops::{Add, Div};
+use alloc::vec::Vec;
+use core::{
+    iter::{ExactSizeIterator, repeat_n},
+    ops::{Add, Div},
+};
 
 use i_triangle::{
     float::triangulatable::Triangulatable,
