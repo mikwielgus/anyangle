@@ -90,7 +90,7 @@ impl<S: Ord, T: PartialEq> PartialEq for Entry<S, T> {
 }
 
 /// The constant environment during an A* search (i.e. what never changes during an [`astar`] invocation).
-struct Environment<'a, T: MultiLayerNavmesh, Score, Pnf> {
+struct Environment<'a, T: Topo2DComplex, Score, Pnf> {
     mesh: &'a T,
     point_norm: Pnf,
     final_end: Endpoint<T::VertexId>,
@@ -314,14 +314,140 @@ where
     }
 }
 
-pub fn astar<T, Score, Pnf>(
-    mesh: &T,
+pub struct Astar<'a, T: Topo2DComplex, Score, Pnf> {
+    best_paths: BestPaths<Score, BestPathKey<T::FaceId, T::VertexId>>,
+    heap: BinaryHeap<Entry<Score, T::FaceId>>,
+    env: Environment<'a, T, Score, Pnf>,
+}
+
+#[derive(Clone, Debug)]
+pub enum Output<T: Topo2DComplex, Score> {
+    /// A successful A* result
+    Result(Vec<FunnelEntry<T::VertexId>>),
+
+    IntermediateStep(Vec<(Node<T::FaceId>, Score)>),
+}
+
+impl<T, Score, Pnf> Iterator for Astar<'_, T, Score, Pnf>
+where
+    T: MultiLayerNavmesh,
+    <T::Scalar as AbsDiffEq>::Epsilon: Clone,
+    Score: Clone + Ord + Zero + fmt::Debug,
+    Pnf: Fn(&[T::Scalar; 2]) -> Score,
+{
+    type Item = Output<T, Score>;
+
+    fn next(&mut self) -> Option<Output<T, Score>> {
+        // main search loop
+        let cur = self.heap.pop()?;
+        if self.env.final_end.layers.is_on_layer(cur.key.layer)
+            && self
+                .env
+                .mesh
+                .face_adjacent_vertices(cur.key.fixed)
+                .find(|fixed| self.env.final_end.fixed.contains(fixed))
+                .is_some()
+        {
+            let ret = self.env.funnel(&self.best_paths, None, &cur.key);
+            return Some(Output::Result(ret.0));
+        }
+
+        // TODO(fogti): catch cases where this iteration has a worse score than the best path to this node
+
+        let face_transition = self
+            .env
+            .mesh
+            .face_adjacent_faces(cur.key.fixed)
+            // filter untraversable faces
+            .filter(|&inner_face| {
+                self.env
+                    .mesh
+                    .face_layers(inner_face)
+                    .is_on_layer(cur.key.layer)
+            })
+            .map(|fixed| Node {
+                fixed,
+                layer: cur.key.layer,
+            });
+
+        let layer_transition = self
+            .env
+            .mesh
+            .face_layers(cur.key.fixed)
+            .adjacent_layers_to(cur.key.layer)
+            .into_iter()
+            .map(|layer| Node {
+                fixed: cur.key.fixed,
+                layer,
+            });
+
+        let next_nodes = face_transition
+            .chain(layer_transition)
+            // weigh candidates
+            .filter_map(|next_node| {
+                self.env
+                    .calculate_score(&self.best_paths, Some(&cur.key), &next_node)
+                    .map(|(score, _, _)| (next_node, score))
+            })
+            .collect::<Vec<_>>();
+
+        let next_nodes2 = next_nodes
+            .iter()
+            .map(|(next_node, score)| {
+                (
+                    *next_node,
+                    score.clone(),
+                    Node {
+                        fixed: BestPathKey::Face(next_node.fixed),
+                        layer: next_node.layer,
+                    },
+                )
+            })
+            // filter cases of worse newer scores
+            .filter(|(_, score, bp_node)| {
+                if let Some(Entry {
+                    score: old_score, ..
+                }) = self.best_paths.0.get(bp_node)
+                    && score >= old_score
+                {
+                    false
+                } else {
+                    true
+                }
+            })
+            .collect::<Vec<_>>();
+
+        let ret = Output::IntermediateStep(next_nodes);
+
+        for (next_node, score, bp_node) in next_nodes2 {
+            self.best_paths.0.insert(
+                bp_node,
+                Entry {
+                    key: Node {
+                        fixed: BestPathKey::Face(cur.key.fixed),
+                        layer: cur.key.layer,
+                    },
+                    score: score.clone(),
+                },
+            );
+            self.heap.push(Entry {
+                key: next_node,
+                score,
+            });
+        }
+
+        Some(ret)
+    }
+}
+
+pub fn astar<'mesh, T, Score, Pnf>(
+    mesh: &'mesh T,
     point_norm: Pnf,
     start: Endpoint<T::VertexId>,
     end: Endpoint<T::VertexId>,
     epsilon: <T::Scalar as AbsDiffEq>::Epsilon,
     layer_transition_penality: Score,
-) -> Vec<FunnelEntry<T::VertexId>>
+) -> Astar<'mesh, T, Score, Pnf>
 where
     T: MultiLayerNavmesh,
     <T::Scalar as AbsDiffEq>::Epsilon: Clone,
@@ -376,89 +502,9 @@ where
         }
     }
 
-    // main search loop
-    while let Some(cur) = heap.pop() {
-        if env.final_end.layers.is_on_layer(cur.key.layer)
-            && env
-                .mesh
-                .face_adjacent_vertices(cur.key.fixed)
-                .find(|fixed| env.final_end.fixed.contains(fixed))
-                .is_some()
-        {
-            let ret = env.funnel(&best_paths, None, &cur.key);
-            return ret.0;
-        }
-
-        // TODO(fogti): catch cases where this iteration has a worse score than the best path to this node
-
-        let face_transition = env
-            .mesh
-            .face_adjacent_faces(cur.key.fixed)
-            // filter untraversable faces
-            .filter(|&inner_face| env.mesh.face_layers(inner_face).is_on_layer(cur.key.layer))
-            .map(|fixed| Node {
-                fixed,
-                layer: cur.key.layer,
-            });
-
-        let layer_transition = env
-            .mesh
-            .face_layers(cur.key.fixed)
-            .adjacent_layers_to(cur.key.layer)
-            .into_iter()
-            .map(|layer| Node {
-                fixed: cur.key.fixed,
-                layer,
-            });
-
-        let next_nodes = face_transition
-            .chain(layer_transition)
-            // weigh candidates
-            .filter_map(|next_node| {
-                env.calculate_score(&best_paths, Some(&cur.key), &next_node)
-                    .map(|(score, _, _)| (next_node, score))
-            })
-            .map(|(next_node, score)| {
-                (
-                    next_node,
-                    score,
-                    Node {
-                        fixed: BestPathKey::Face(next_node.fixed),
-                        layer: next_node.layer,
-                    },
-                )
-            })
-            // filter cases of worse newer scores
-            .filter(|(_, score, bp_node)| {
-                if let Some(Entry {
-                    score: old_score, ..
-                }) = best_paths.0.get(bp_node)
-                    && score >= old_score
-                {
-                    false
-                } else {
-                    true
-                }
-            })
-            .collect::<Vec<_>>();
-
-        for (next_node, score, bp_node) in next_nodes {
-            best_paths.0.insert(
-                bp_node,
-                Entry {
-                    key: Node {
-                        fixed: BestPathKey::Face(cur.key.fixed),
-                        layer: cur.key.layer,
-                    },
-                    score: score.clone(),
-                },
-            );
-            heap.push(Entry {
-                key: next_node,
-                score,
-            });
-        }
+    Astar {
+        best_paths,
+        heap,
+        env,
     }
-
-    Vec::new()
 }

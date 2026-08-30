@@ -216,7 +216,7 @@ async fn main() {
         layers: i.layers,
     });
 
-    let astar_result = astar(
+    let mut astar_data = astar(
         &navmesh,
         demo.norm.fun(),
         endpoints[0].clone(),
@@ -227,6 +227,17 @@ async fn main() {
             diagonal: 0,
         },
     );
+
+    let astar_result = loop {
+        let Some(tmp) = astar_data.next() else {
+            break Vec::new();
+        };
+        match tmp {
+            anyangle::flat::astar::Output::Result(res) => break res,
+            // TODO: visualize intermediates
+            _ => {}
+        }
+    };
 
     println!("astar result: {:?}", astar_result);
 
