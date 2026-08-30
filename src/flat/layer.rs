@@ -113,8 +113,8 @@ impl LayerIds {
             break match cur_matches {
                 [false, false] => {
                     ret = [
-                        ret[0].and_then(|l| l.checked_sub(1)),
-                        ret[1].and_then(|l| l.checked_add(1)),
+                        ret[0].and_then(LayerId::checked_sub_one),
+                        ret[1].and_then(LayerId::checked_add_one),
                     ];
                     continue;
                 }

@@ -20,8 +20,18 @@ impl LayerId {
     }
 
     #[inline]
+    pub(crate) fn checked_add_one(self) -> Option<Self> {
+        self.0.checked_add(1).map(Self)
+    }
+
+    #[inline]
     pub fn checked_sub(self, delta: usize) -> Option<Self> {
         self.0.checked_sub(u32::try_from(delta).ok()?).map(Self)
+    }
+
+    #[inline]
+    pub(crate) fn checked_sub_one(self) -> Option<Self> {
+        self.0.checked_sub(1).map(Self)
     }
 }
 
