@@ -423,26 +423,25 @@ where
             .map(|(id, vertex)| (*vertex, id as u32))
             .collect();
 
-        // create indices for all the faces
-        let mut faces: Box<[_]> = self
-            .rtree
-            .iter()
-            .map(|face| FrozenFace {
-                contour: face.contour.iter().map(|i| vertices_rev[i]).collect(),
-                // this gets filled in the next paragraph
-                neighbours: Vec::new().into_boxed_slice(),
-                data: face.data.clone(),
-            })
-            .collect();
-        assert!(faces.len() <= max_slice_len);
-        // reverse mapping from face contours to indices
-        // this relies on `self.rtree.iter()` having stable iteration order
-        let faces_rev: BTreeMap<&[[Scalar; 2]], u32> = self
+        // create indices & reverse mapping for all the faces
+        assert!(self.rtree.size() <= max_slice_len);
+        let (faces, faces_rev): (Vec<FrozenFace<_>>, BTreeMap<&[[Scalar; 2]], u32>) = self
             .rtree
             .iter()
             .enumerate()
-            .map(|(id, face)| (&face.contour[..], id as u32))
-            .collect();
+            .map(|(face_id, face)| {
+                (
+                    FrozenFace {
+                        contour: face.contour.iter().map(|i| vertices_rev[i]).collect(),
+                        // this gets filled in the next paragraph
+                        neighbours: Vec::new().into_boxed_slice(),
+                        data: face.data.clone(),
+                    },
+                    (&face.contour[..], face_id as u32),
+                )
+            })
+            .unzip();
+        let mut faces = faces.into_boxed_slice();
 
         // freeze of:
         // - `Topo2DComplex::face_adjacent_faces`
