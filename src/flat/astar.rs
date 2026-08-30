@@ -3,7 +3,7 @@
 // SPDX-License-Identifier: MIT OR Apache-2.0
 
 use alloc::{
-    collections::{BTreeMap, BTreeSet, BinaryHeap},
+    collections::{BTreeMap, BTreeSet, BinaryHeap, btree_map},
     vec,
     vec::Vec,
 };
@@ -391,52 +391,43 @@ where
             })
             .collect::<Vec<_>>();
 
-        let next_nodes2 = next_nodes
-            .iter()
-            .map(|(next_node, score)| {
-                (
-                    *next_node,
-                    score.clone(),
-                    Node {
-                        fixed: BestPathKey::Face(next_node.fixed),
-                        layer: next_node.layer,
-                    },
-                )
-            })
+        for (next_node, score) in &next_nodes {
+            let next_node = *next_node;
+            let bp_node = self.best_paths.0.entry(Node {
+                fixed: BestPathKey::Face(next_node.fixed),
+                layer: next_node.layer,
+            });
             // filter cases of worse newer scores
-            .filter(|(_, score, bp_node)| {
-                if let Some(Entry {
+            if let btree_map::Entry::Occupied(occ) = &bp_node
+                && let Entry {
                     score: old_score, ..
-                }) = self.best_paths.0.get(bp_node)
-                    && score >= old_score
-                {
-                    false
-                } else {
-                    true
-                }
-            })
-            .collect::<Vec<_>>();
-
-        let ret = Output::IntermediateStep(next_nodes);
-
-        for (next_node, score, bp_node) in next_nodes2 {
-            self.best_paths.0.insert(
-                bp_node,
-                Entry {
-                    key: Node {
-                        fixed: BestPathKey::Face(cur.key.fixed),
-                        layer: cur.key.layer,
-                    },
-                    score: score.clone(),
+                } = occ.get()
+                && score >= old_score
+            {
+                continue;
+            }
+            let new_bp_data = Entry {
+                key: Node {
+                    fixed: BestPathKey::Face(cur.key.fixed),
+                    layer: cur.key.layer,
                 },
-            );
+                score: score.clone(),
+            };
+            match bp_node {
+                btree_map::Entry::Occupied(mut occ) => {
+                    occ.insert(new_bp_data);
+                }
+                btree_map::Entry::Vacant(vac) => {
+                    vac.insert(new_bp_data);
+                }
+            }
             self.heap.push(Entry {
                 key: next_node,
-                score,
+                score: score.clone(),
             });
         }
 
-        Some(ret)
+        Some(Output::IntermediateStep(next_nodes))
     }
 }
 
