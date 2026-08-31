@@ -4,7 +4,7 @@ resolver = "2"
 
 [workspace.dependencies]
 bit-set = { version = "0.11", default-features = false }
-i_triangle = { git = "https://github.com/iShape-Rust/iTriangle" }
+i_triangle = "0.48"
 polygon_unionfind = { version = "0.8", features = ["undoredo"] }
 rstar = "0.13"
 serde = { version = "1.0", default-features = false, features = ["alloc", "derive"] }
