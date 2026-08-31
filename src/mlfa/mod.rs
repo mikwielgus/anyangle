@@ -17,8 +17,8 @@ pub trait Navmesh<K> {
     type NavnodeId;
 
     fn adjacents(&self, node: Self::NavnodeId) -> Vec<Self::NavnodeId>;
-    fn upward_stitches(&self, node: Self::NavnodeId) -> Vec<([K; 2], Self::NavnodeId)>;
-    fn downward_stitches(&self, node: Self::NavnodeId) -> Vec<([K; 2], Self::NavnodeId)>;
+    fn upward_stitches(&self, node: Self::NavnodeId) -> Vec<Self::NavnodeId>;
+    fn downward_stitches(&self, node: Self::NavnodeId) -> Vec<Self::NavnodeId>;
     fn position(&self, node: Self::NavnodeId) -> [K; 2];
 }
 
