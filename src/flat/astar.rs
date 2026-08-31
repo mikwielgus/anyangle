@@ -325,7 +325,7 @@ pub enum Output<T: Topo2DComplex, Score> {
     /// A successful A* result
     Result(Vec<FunnelEntry<T::VertexId>>),
 
-    IntermediateStep(Vec<(Node<T::FaceId>, Score)>),
+    IntermediateStep(Node<T::FaceId>, Vec<(Node<T::FaceId>, Score)>),
 }
 
 impl<T, Score, Pnf> Iterator for Astar<'_, T, Score, Pnf>
@@ -427,7 +427,7 @@ where
             });
         }
 
-        Some(Output::IntermediateStep(next_nodes))
+        Some(Output::IntermediateStep(cur.key, next_nodes))
     }
 }
 
