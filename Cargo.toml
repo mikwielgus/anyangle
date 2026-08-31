@@ -5,7 +5,7 @@ resolver = "2"
 [workspace.dependencies]
 bit-set = { version = "0.11", default-features = false }
 i_triangle = "0.48"
-polygon_unionfind = { version = "0.8", features = ["undoredo"] }
+polygon_unionfind = { git = "https://github.com/mikwielgus/polygon_unionfind", features = ["undoredo"] }
 rstar = "0.13"
 serde = { version = "1.0", default-features = false, features = ["alloc", "derive"] }
 
