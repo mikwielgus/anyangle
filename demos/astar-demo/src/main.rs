@@ -239,7 +239,26 @@ async fn main() {
         }
     };
 
-    println!("astar result: {:?}", astar_result);
+    println!("astar result:");
+    for i in &astar_result {
+        print!("  - ");
+        use anyangle::flat::{
+            Topo2DComplex,
+            astar::{FunnelEntry, Node},
+        };
+        match i {
+            FunnelEntry::Point(Node { fixed, layer }) => {
+                println!(
+                    "point {:?} on layer {layer:?}",
+                    navmesh.vertex_position(*fixed)
+                );
+            }
+            FunnelEntry::LayerTransition(from_layer, to_layer) => {
+                println!("layer transition from {from_layer:?} to {to_layer:?}");
+            }
+        }
+    }
+    println!();
 
     loop {
         // handle input
