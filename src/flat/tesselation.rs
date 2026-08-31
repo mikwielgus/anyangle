@@ -263,6 +263,22 @@ where
             ),
         }
     }
+
+    /// Moves all objects in this tesselation by `translation`.
+    pub fn move_by(&mut self, translation: [Scalar; 2]) {
+        self.rtree = RTree::bulk_load_with_params(
+            core::mem::take(&mut self.rtree)
+                .into_iter()
+                .map(|mut face| {
+                    for i in &mut face.contour[..] {
+                        i[0] += translation[0];
+                        i[1] += translation[1];
+                    }
+                    face
+                })
+                .collect(),
+        );
+    }
 }
 
 impl<'a, Scalar, T, Params> Topo2DComplex for &'a Tesselation<Scalar, T, Params>
