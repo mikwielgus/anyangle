@@ -15,7 +15,7 @@ version = "0.1.0"
 edition = "2024"
 
 [features]
-serde = ["dep:serde"]
+serde = ["dep:serde", "rstar/serde"]
 
 [dependencies]
 approx = ">= 0.4.0, < 0.6.0"
