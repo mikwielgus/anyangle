@@ -7,7 +7,7 @@ use alloc::{
     vec,
     vec::Vec,
 };
-use core::{cmp::Ordering, fmt};
+use core::{cmp::Ordering, fmt, iter};
 
 use approx::AbsDiffEq;
 use num_traits::Zero;
@@ -189,7 +189,7 @@ where
                     let Some(portal) = self.mesh.portal_between(i.fixed, j.fixed) else {
                         return (Vec::new(), Vec::new());
                     };
-                    let portal = portal.map(|fixed| {
+                    funnel.push(portal.map(|fixed| {
                         (
                             self.mesh.vertex_position(fixed),
                             Node {
@@ -197,15 +197,18 @@ where
                                 layer: j.layer,
                             },
                         )
-                    });
-                    if let Some((_, (_, new_apex))) = funnel.advance(self.epsilon.clone(), portal) {
-                        ret.push(FunnelEntry::Point(*new_apex));
-                    }
+                    }));
                 }
             }
         }
 
-        let final_measure_point = &funnel.apex.0;
+        ret.extend(
+            funnel
+                .with_epsilon(self.epsilon.clone())
+                .map(|(_, node)| FunnelEntry::Point(node)),
+        );
+
+        let final_measure_point = &funnel.apex;
         let mut choices: Vec<_> = self
             .final_end
             .fixed
@@ -218,27 +221,28 @@ where
                         layer: funnel.apex.1.layer,
                     },
                 );
-                let tmp = funnel
-                    .clone()
-                    .advance(
-                        self.epsilon.clone(),
-                        [final_end_pos.clone(), final_end_pos.clone()],
-                    )
-                    .map(|(_, new_apex)| new_apex.clone());
-                let length = if let Some((new_apex_pos, _)) = &tmp {
-                    self.point_distance(final_measure_point, new_apex_pos)
-                        + self.point_distance(new_apex_pos, &final_end_pos.0)
-                } else {
-                    self.point_distance(final_measure_point, &final_end_pos.0)
-                };
-                (length, tmp.map(|(_, fixed)| fixed), final_end_pos.1)
+                let mut final_funnel = funnel.clone();
+                final_funnel.push([final_end_pos.clone(), final_end_pos.clone()]);
+                let final_stretch = final_funnel
+                    .with_epsilon(self.epsilon.clone())
+                    .collect::<Vec<_>>();
+                let final_stretch_positions = iter::once(final_measure_point.0.clone())
+                    .chain(final_stretch.iter().map(|(pos, _)| pos.clone()))
+                    .chain(iter::once(final_end_pos.0))
+                    .collect::<Vec<_>>();
+                let length = final_stretch_positions
+                    .array_windows::<2>()
+                    .fold(Zero::zero(), |length: Score, [from, to]| {
+                        length + self.point_distance(from, to)
+                    });
+                (length, final_stretch, final_end_pos.1)
             })
             .collect();
         choices.sort_by_key(|(k, _, _)| k.clone());
-        let &(_, maybe_new_apex, mut final_end) = choices.first().unwrap();
-        if let Some(new_apex) = maybe_new_apex {
-            ret.push(FunnelEntry::Point(new_apex));
+        let &(_, ref final_stretch, mut final_end) = choices.first().unwrap();
+        for (_, new_apex) in final_stretch {
             final_end.layer = new_apex.layer;
+            ret.push(FunnelEntry::Point(*new_apex));
         }
         if !self.final_end.layers.is_on_layer(final_end.layer) {
             let mut current_layer = final_end.layer;
