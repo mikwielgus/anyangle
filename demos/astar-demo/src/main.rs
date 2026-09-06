@@ -4,7 +4,7 @@
 
 use anyangle::{
     flat::{
-        FrozenTesselation, GetLayerIds, LayerIds, Tesselation,
+        FrozenTesselation, GetLayerIds, LayerIds, Tesselation, Topo2DComplex,
         astar::{Endpoint, FunnelEntry, Node, astar},
     },
     math::diagonal_taxicab::DiagonalTaxicabNorm,
@@ -12,6 +12,7 @@ use anyangle::{
 use core::ops::ControlFlow;
 use macroquad::prelude::*;
 use rstar::{AABB, RTree, RTreeObject};
+use std::collections::BTreeSet;
 
 type Scalar = i32;
 const LAYER_WEIGHT: f32 = 1.0;
@@ -62,6 +63,8 @@ struct Demo {
     obstacles: Vec<Obstacle>,
     endpoints: [Obstacle; 2],
     norm: Norm,
+    #[serde(default)]
+    amount_results: usize,
     layer_transition_penality: Scalar,
 }
 
@@ -113,15 +116,26 @@ impl RTreeObject for Obstacle {
     }
 }
 
-async fn draw_navmesh(navmesh: &FrozenTesselation<Scalar, LayerIds>, viewport: &Viewport) {
+async fn draw_navmesh(
+    navmesh: &FrozenTesselation<Scalar, LayerIds>,
+    viewport: &Viewport,
+    highlight_faces: Option<BTreeSet<u32>>,
+) {
     const LAYER_ALPHA_FACTOR: f32 = LAYER_WEIGHT * 2. / core::f32::consts::PI;
-    for face in navmesh.faces() {
-        let color = Color::new(
-            0.,
-            1.,
-            1.,
-            (face.data.0.count() as f32).atan() * LAYER_ALPHA_FACTOR,
-        );
+    for (face_id, face) in navmesh.faces().iter().enumerate() {
+        let face_id = face_id as u32;
+        let color = if let Some(highlight_faces) = &highlight_faces
+            && highlight_faces.contains(&face_id)
+        {
+            MAGENTA
+        } else {
+            Color::new(
+                0.,
+                1.,
+                1.,
+                (face.data.0.count() as f32).atan() * LAYER_ALPHA_FACTOR,
+            )
+        };
         for v in face
             .contour
             .iter()
@@ -216,6 +230,15 @@ async fn main() {
         layers: i.layers,
     });
 
+    let mut amount_results = if demo.amount_results == 0 {
+        1
+    } else {
+        demo.amount_results
+    };
+
+    let mut sleeper = 0;
+    let mut highlighted_faces = None;
+
     let mut astar_data = astar(
         &navmesh,
         demo.norm.fun(),
@@ -228,87 +251,105 @@ async fn main() {
         },
     );
 
-    let astar_result = loop {
-        let Some(tmp) = astar_data.next() else {
-            break Vec::new();
-        };
-        match tmp {
-            anyangle::flat::astar::Output::Result(res) => break res,
-            // TODO: visualize intermediates
-            _ => {}
-        }
-    };
-
-    println!("astar result:");
-    for i in &astar_result {
-        print!("  - ");
-        use anyangle::flat::{
-            Topo2DComplex,
-            astar::{FunnelEntry, Node},
-        };
-        match i {
-            FunnelEntry::Point(Node { fixed, layer }) => {
-                println!(
-                    "point {:?} on layer {layer:?}",
-                    navmesh.vertex_position(*fixed)
-                );
-            }
-            FunnelEntry::LayerTransition(from_layer, to_layer) => {
-                println!("layer transition from {from_layer:?} to {to_layer:?}");
-            }
-        }
-    }
-    println!();
+    let mut pathing_result = None;
 
     loop {
-        // handle input
+        if pathing_result.is_none() && amount_results != 0 && sleeper == 0 {
+            let mut iterated = false;
+            for tmp in &mut astar_data {
+                iterated = true;
+                match tmp {
+                    anyangle::flat::astar::Output::Result(res) => {
+                        println!("astar result:");
+                        for i in &res {
+                            print!("  - ");
+                            match i {
+                                FunnelEntry::Point(Node { fixed, layer }) => {
+                                    println!(
+                                        "point {:?} on layer {layer:?}",
+                                        navmesh.vertex_position(*fixed)
+                                    );
+                                }
+                                FunnelEntry::LayerTransition(from_layer, to_layer) => {
+                                    println!(
+                                        "layer transition from {from_layer:?} to {to_layer:?}"
+                                    );
+                                }
+                            }
+                        }
+                        println!();
 
-        // - wheel
-        {
-            let (_, wheel) = mouse_wheel();
-            if wheel.abs() >= f32::EPSILON {
-                viewport.scroll_at(&mouse_position(), wheel);
+                        pathing_result = Some(res);
+                        highlighted_faces = None;
+                        amount_results -= 1;
+                        break;
+                    }
+                    // TODO: visualize intermediates
+                    _ => {}
+                }
             }
+            if !iterated {
+                amount_results = 0;
+            }
+        }
+
+        sleeper += 1;
+        sleeper %= 10;
+
+        // handle input
+        let (_, wheel) = mouse_wheel();
+        if wheel.abs() >= f32::EPSILON {
+            viewport.scroll_at(&mouse_position(), wheel);
+        }
+
+        if is_quit_requested() {
+            return;
+        }
+
+        if is_key_pressed(KeyCode::Space) && amount_results != 0 {
+            pathing_result = None;
+            clear_input_queue();
         }
 
         // draw stuff
-
         clear_background(BLACK);
+        draw_navmesh(&navmesh, &viewport, highlighted_faces.clone()).await;
 
-        draw_navmesh(&navmesh, &viewport).await;
-
-        let mut last_point: Option<Node<u32>> = None;
-        let mut encountered_layer_transition = false;
-        for i in &astar_result {
-            match i {
-                FunnelEntry::LayerTransition(_, _) => {
-                    encountered_layer_transition = true;
-                }
-                FunnelEntry::Point(pt) => {
-                    if let Some(last_pt) = last_point {
-                        let points = [last_pt.fixed, pt.fixed]
-                            .map(|fixed| viewport.translate(&navmesh.vertices()[fixed as usize]));
-                        draw_line(
-                            points[0][0],
-                            points[0][1],
-                            points[1][0],
-                            points[1][1],
-                            1.0,
-                            if encountered_layer_transition {
-                                MAGENTA
-                            } else {
-                                RED
-                            },
-                        );
-                        encountered_layer_transition &= last_pt.fixed == pt.fixed;
-                    } else {
-                        encountered_layer_transition = false;
+        if let Some(pathing_result) = &pathing_result {
+            let mut last_point: Option<Node<u32>> = None;
+            let mut encountered_layer_transition = false;
+            for i in pathing_result {
+                match i {
+                    FunnelEntry::LayerTransition(_, _) => {
+                        encountered_layer_transition = true;
                     }
-                    last_point = Some(*pt);
+                    FunnelEntry::Point(pt) => {
+                        if let Some(last_pt) = last_point {
+                            let points = [last_pt.fixed, pt.fixed].map(|fixed| {
+                                viewport.translate(&navmesh.vertices()[fixed as usize])
+                            });
+                            draw_line(
+                                points[0][0],
+                                points[0][1],
+                                points[1][0],
+                                points[1][1],
+                                1.0,
+                                if encountered_layer_transition {
+                                    MAGENTA
+                                } else {
+                                    RED
+                                },
+                            );
+                            encountered_layer_transition &= last_pt.fixed == pt.fixed;
+                        } else {
+                            encountered_layer_transition = false;
+                        }
+                        last_point = Some(*pt);
+                    }
                 }
             }
         }
 
-        next_frame().await
+        next_frame().await;
     }
 }

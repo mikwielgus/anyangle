@@ -6,6 +6,7 @@ ext_boundary = [
 ]
 
 norm = "diagonal-taxicab"
+amount_results = 3
 
 layer_transition_penality = 10
 
@@ -36,6 +37,15 @@ obstacles = [
             [40, 20],
         ],
         layers = [0]
+    },
+    {
+        exterior = [
+            [5, 5],
+            [5, 95],
+            [95, 95],
+            [95, 5],
+        ],
+        layers = []
     },
 ]
 

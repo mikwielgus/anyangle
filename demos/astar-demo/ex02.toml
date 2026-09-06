@@ -6,6 +6,7 @@ ext_boundary = [
 ]
 
 norm = "diagonal-taxicab"
+amount_results = 3
 
 layer_transition_penality = 10
 
