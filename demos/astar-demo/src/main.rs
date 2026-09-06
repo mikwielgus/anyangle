@@ -156,12 +156,12 @@ async fn main() {
         offset: [0., 0.],
     };
 
-    let demo = std::fs::read(
-        std::env::args()
-            .nth(1)
-            .expect("Expected one command line argument (demo filename)"),
-    )
-    .expect("Unable to read demo file");
+    let Some(demo_fname) = std::env::args().nth(1) else {
+        eprintln!("USAGE: astar-demo DEMO_EXAMPLE_FILE.toml");
+        std::process::exit(1);
+    };
+
+    let demo = std::fs::read(demo_fname).expect("Unable to read demo file");
     let demo: Demo = toml::from_slice(&demo[..]).expect("Unable to parse demo file");
 
     let all_layers: LayerIds = demo
