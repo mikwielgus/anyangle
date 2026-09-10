@@ -15,6 +15,11 @@ impl LayerId {
     pub const MAX: LayerId = LayerId(u32::MAX);
 
     #[inline]
+    pub fn index(self) -> usize {
+        self.0.try_into().unwrap()
+    }
+
+    #[inline]
     pub fn checked_add(self, delta: usize) -> Option<Self> {
         self.0.checked_add(u32::try_from(delta).ok()?).map(Self)
     }
