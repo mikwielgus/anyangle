@@ -515,6 +515,21 @@ impl<Scalar, T> FrozenTesselation<Scalar, T> {
     pub fn faces(&self) -> &[FrozenFace<T>] {
         &self.faces[..]
     }
+
+    /// Returns an iterator over the coordinates of the faces
+    /// (resolving one level of indirection).
+    pub fn faces_coordinates<'s>(
+        &'s self,
+    ) -> impl Iterator<Item = (&'s FrozenFace<T>, impl Iterator<Item = &'s [Scalar; 2]>)> {
+        self.faces.iter().map(|face| {
+            (
+                face,
+                face.contour
+                    .iter()
+                    .map(|&vertex| &self.vertices[vertex as usize]),
+            )
+        })
+    }
 }
 
 impl<Scalar, T, Params> Tesselation<Scalar, T, Params>

@@ -122,7 +122,7 @@ async fn draw_navmesh(
     highlight_faces: Option<BTreeSet<u32>>,
 ) {
     const LAYER_ALPHA_FACTOR: f32 = LAYER_WEIGHT * 2. / core::f32::consts::PI;
-    for (face_id, face) in navmesh.faces().iter().enumerate() {
+    for (face_id, (face, face_vertices)) in navmesh.faces_coordinates().enumerate() {
         let face_id = face_id as u32;
         let color = if let Some(highlight_faces) = &highlight_faces
             && highlight_faces.contains(&face_id)
@@ -136,14 +136,11 @@ async fn draw_navmesh(
                 (face.data.0.count() as f32).atan() * LAYER_ALPHA_FACTOR,
             )
         };
-        for v in face
-            .contour
-            .iter()
-            .chain(face.contour.first())
-            .map(|&i| viewport.translate(&navmesh.vertices()[i as usize]))
-            .collect::<Vec<_>>()
-            .windows(2)
-        {
+        let mut face_vertices = face_vertices
+            .map(|i| viewport.translate(i))
+            .collect::<Vec<_>>();
+        face_vertices.push(face_vertices.first().unwrap().clone());
+        for v in face_vertices.windows(2) {
             draw_line(v[0].x, v[0].y, v[1].x, v[1].y, 1., color);
         }
     }
