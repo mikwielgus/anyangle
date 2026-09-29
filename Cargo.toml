@@ -4,7 +4,7 @@ resolver = "2"
 
 [workspace.dependencies]
 bit-set = { version = "0.11", default-features = false }
-i_triangle = "0.48"
+i_triangle = "0.49"
 polygon_unionfind = { version = "0.10", features = ["undoredo"] }
 rstar = "0.13"
 serde = { version = "1.0", default-features = false, features = ["alloc", "derive"] }
