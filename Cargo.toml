@@ -12,6 +12,13 @@ serde = { version = "1.0", default-features = false, features = ["alloc", "deriv
 [package]
 name = "anyangle"
 version = "0.1.0"
+authors = ["Mikolaj Wielgus <wielgusmikolaj@gmail.com>"]
+description = "Any-angle pathfinding algorithms."
+repository = "https://github.com/mikwielgus/anyangle"
+readme = "README.md"
+license = "MIT OR Apache-2.0"
+keywords = ["pathfinding"]
+categories = ["algorithms"]
 edition = "2024"
 
 [features]
