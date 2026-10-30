@@ -401,14 +401,14 @@ async fn main() {
         }
 
         draw_text(
-            format!("layers: {n} (semi-transparent overlay)"),
+            &format!("layers: {n} (semi-transparent overlay)"),
             12.0,
             24.0,
             22.0,
             LIGHTGRAY,
         );
         draw_text(
-            format!("active lamina layer: {active_layer}"),
+            &format!("active lamina layer: {active_layer}"),
             12.0,
             46.0,
             20.0,
