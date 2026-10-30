@@ -1,3 +1,7 @@
+# SPDX-FileCopyrightText: 2026 anyangle contributors
+#
+# SPDX-License-Identifier: MIT OR Apache-2.0
+
 ext_boundary = [
     [0, 0],
     [0, 100],
