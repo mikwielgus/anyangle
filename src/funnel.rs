@@ -15,7 +15,7 @@
 
 use alloc::vec::Vec;
 use approx::AbsDiffEq;
-use num_traits::Num;
+use numlike::elem::Zero;
 
 use crate::math::*;
 
@@ -67,7 +67,13 @@ where
 
 impl<K, D> Iterator for SimpleFunnelWithEpsilon<'_, K, D>
 where
-    K: AbsDiffEq + Clone + Num + PartialOrd,
+    K: AbsDiffEq
+        + Clone
+        + Zero
+        + PartialOrd
+        + core::ops::Add<Output = K>
+        + core::ops::Mul<Output = K>
+        + core::ops::Sub<Output = K>,
     <K as AbsDiffEq>::Epsilon: Clone,
     D: Clone,
 {

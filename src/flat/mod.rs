@@ -6,7 +6,7 @@
 
 use approx::AbsDiffEq;
 use core::fmt;
-use num_traits::Num;
+use numlike::alg::PofieldBundle;
 
 pub mod astar;
 
@@ -21,7 +21,7 @@ pub use tesselation::{
 pub trait Topo2DComplex {
     type VertexId: Sized + Copy + Eq + Ord + fmt::Debug;
     type FaceId: Sized + Copy + Eq + Ord + fmt::Debug;
-    type Scalar: Sized + Clone + AbsDiffEq + Num + PartialOrd;
+    type Scalar: Sized + Clone + AbsDiffEq + PofieldBundle;
 
     fn vertex_position(&self, vertex: Self::VertexId) -> [Self::Scalar; 2];
 

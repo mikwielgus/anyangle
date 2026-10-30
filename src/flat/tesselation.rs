@@ -411,7 +411,13 @@ where
 
 impl<'a, Scalar, T, Params> Topo2DComplex for &'a Tesselation<Scalar, T, Params>
 where
-    Scalar: Copy + AbsDiffEq + IntNumber + RTreeNum + PartialOrd + OverlayInt,
+    Scalar: Copy
+        + AbsDiffEq
+        + IntNumber
+        + RTreeNum
+        + PartialOrd
+        + OverlayInt
+        + numlike::alg::PofieldBundle,
     Params: RTreeParams,
 {
     type VertexId = [Scalar; 2];
@@ -488,7 +494,13 @@ where
 
 impl<Scalar, T, Params> MultiLayerNavmesh for &Tesselation<Scalar, T, Params>
 where
-    Scalar: Copy + AbsDiffEq + IntNumber + RTreeNum + PartialOrd + OverlayInt,
+    Scalar: Copy
+        + AbsDiffEq
+        + IntNumber
+        + RTreeNum
+        + PartialOrd
+        + OverlayInt
+        + numlike::alg::PofieldBundle,
     T: GetLayerIds,
     Params: RTreeParams,
 {
@@ -557,7 +569,8 @@ impl<Scalar, T> FrozenTesselation<Scalar, T> {
 
 impl<Scalar, T, Params> Tesselation<Scalar, T, Params>
 where
-    Scalar: Copy + AbsDiffEq + IntNumber + RTreeNum + Ord + OverlayInt,
+    Scalar:
+        Copy + AbsDiffEq + IntNumber + RTreeNum + Ord + OverlayInt + numlike::alg::PofieldBundle,
     T: Clone,
     Params: RTreeParams,
 {
@@ -652,7 +665,7 @@ where
 
 impl<Scalar, T> Topo2DComplex for FrozenTesselation<Scalar, T>
 where
-    Scalar: Clone + AbsDiffEq + num_traits::Num + PartialOrd,
+    Scalar: Clone + AbsDiffEq + numlike::alg::PofieldBundle,
 {
     type VertexId = u32;
     type FaceId = u32;
@@ -704,7 +717,7 @@ where
 
 impl<Scalar, T> MultiLayerNavmesh for FrozenTesselation<Scalar, T>
 where
-    Scalar: Clone + AbsDiffEq + num_traits::Num + PartialOrd,
+    Scalar: Clone + AbsDiffEq + numlike::alg::PofieldBundle,
     T: GetLayerIds,
 {
     #[inline]

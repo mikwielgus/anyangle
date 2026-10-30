@@ -5,7 +5,7 @@
 // Programming of this file was entirely done by prompting Cursor Composer 2.0
 // Fast.
 
-use anyangle::mlfa::{DelaunayNavmesh, Navmesher, PolygonWithData, Rings};
+use anyangle::mlfa::{Contours, DelaunayNavmesh, Navmesher, PolygonWithData};
 use macroquad::prelude::*;
 use macroquad::rand::gen_range;
 
@@ -368,7 +368,7 @@ async fn main() {
             let stroke = Color::new(accent.r * 0.92, accent.g * 0.92, accent.b * 0.92, 0.92);
             let line_w = 4.25_f32;
             let inter = &navmesher.laminate().interlaminas()[inter_i];
-            let polygon_set = inter.primary();
+            let polygon_set = inter.main();
             for polygon in polygon_set.polygons().values() {
                 draw_closed_polyline_i32(polygon.exterior(), origin, zoom, line_w, stroke);
                 for interior in polygon.interiors() {

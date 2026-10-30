@@ -10,7 +10,8 @@ use alloc::{
 use core::{cmp::Ordering, fmt, iter};
 
 use approx::AbsDiffEq;
-use num_traits::Zero;
+use core::ops::Add;
+use numlike::elem::Zero;
 
 use super::{LayerIds, MultiLayerNavmesh, Topo2DComplex};
 use crate::LayerId;
@@ -102,7 +103,7 @@ impl<T, Score, Pnf> Environment<'_, T, Score, Pnf>
 where
     T: MultiLayerNavmesh,
     <<T as Topo2DComplex>::Scalar as AbsDiffEq>::Epsilon: Clone,
-    Score: Clone + Ord + Zero + fmt::Debug,
+    Score: Clone + Ord + Zero + Add<Output = Score> + fmt::Debug,
     Pnf: Fn(&[T::Scalar; 2]) -> Score,
 {
     fn funnel(
@@ -232,7 +233,7 @@ where
                     .collect::<Vec<_>>();
                 let length = final_stretch_positions
                     .array_windows::<2>()
-                    .fold(Zero::zero(), |length: Score, [from, to]| {
+                    .fold(Score::zero(), |length: Score, [from, to]| {
                         length + self.point_distance(from, to)
                     });
                 (length, final_stretch, final_end_pos.1)
@@ -339,7 +340,7 @@ impl<T, Score, Pnf> Iterator for Astar<'_, T, Score, Pnf>
 where
     T: MultiLayerNavmesh,
     <T::Scalar as AbsDiffEq>::Epsilon: Clone,
-    Score: Clone + Ord + Zero + fmt::Debug,
+    Score: Clone + Ord + Zero + Add<Output = Score> + fmt::Debug,
     Pnf: Fn(&[T::Scalar; 2]) -> Score,
 {
     type Item = Output<T, Score>;
@@ -449,7 +450,7 @@ pub fn astar<'mesh, T, Score, Pnf>(
 where
     T: MultiLayerNavmesh,
     <T::Scalar as AbsDiffEq>::Epsilon: Clone,
-    Score: Clone + Ord + Zero + fmt::Debug,
+    Score: Clone + Ord + Zero + Add<Output = Score> + fmt::Debug,
     Pnf: Fn(&[T::Scalar; 2]) -> Score,
 {
     let mut best_paths = BestPaths::<_, BestPathKey<_, _>>(Default::default());

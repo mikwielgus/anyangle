@@ -13,7 +13,7 @@ use i_triangle::{
     i_overlay::{i_float::int::point::IntPoint, i_shape::int::shape::IntShapes},
     int::triangulatable::IntTriangulatable,
 };
-use num_traits::One;
+use numlike::elem::One;
 
 use super::{Navmesh, Remesh};
 use crate::LayerId;
