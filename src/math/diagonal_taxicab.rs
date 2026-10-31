@@ -36,12 +36,15 @@ where
     }
 }
 
+// re: mul_add, see https://github.com/rust-lang/rust/issues/137578
+
 impl<Scalar> From<DiagonalTaxicabNorm<Scalar>> for f32
 where
     Scalar: Into<Self>,
 {
     fn from(x: DiagonalTaxicabNorm<Scalar>) -> Self {
-        core::f32::consts::SQRT_2.mul_add(x.diagonal.into(), x.along_axis.into())
+        // core::f32::consts::SQRT_2.mul_add(x.diagonal.into(), x.along_axis.into())
+        core::f32::consts::SQRT_2 * x.diagonal.into() + x.along_axis.into()
     }
 }
 
@@ -50,7 +53,8 @@ where
     Scalar: Into<Self>,
 {
     fn from(x: DiagonalTaxicabNorm<Scalar>) -> Self {
-        core::f64::consts::SQRT_2.mul_add(x.diagonal.into(), x.along_axis.into())
+        // core::f64::consts::SQRT_2.mul_add(x.diagonal.into(), x.along_axis.into())
+        core::f64::consts::SQRT_2 * x.diagonal.into() + x.along_axis.into()
     }
 }
 
