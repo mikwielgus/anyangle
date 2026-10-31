@@ -124,16 +124,19 @@ async fn draw_navmesh(
     const LAYER_ALPHA_FACTOR: f32 = LAYER_WEIGHT * 2. / core::f32::consts::PI;
     for (face_id, (face, face_vertices)) in navmesh.faces_coordinates().enumerate() {
         let face_id = face_id as u32;
-        let color = if let Some(highlight_faces) = &highlight_faces
+        let (thickness, color) = if let Some(highlight_faces) = &highlight_faces
             && highlight_faces.contains(&face_id)
         {
-            MAGENTA
+            (5., MAGENTA)
         } else {
-            Color::new(
-                0.,
+            (
                 1.,
-                1.,
-                (face.data.0.count() as f32).atan() * LAYER_ALPHA_FACTOR,
+                Color::new(
+                    0.,
+                    1.,
+                    1.,
+                    (face.data.0.count() as f32).atan() * LAYER_ALPHA_FACTOR,
+                ),
             )
         };
         let mut face_vertices = face_vertices
@@ -141,7 +144,7 @@ async fn draw_navmesh(
             .collect::<Vec<_>>();
         face_vertices.push(face_vertices.first().unwrap().clone());
         for v in face_vertices.windows(2) {
-            draw_line(v[0].x, v[0].y, v[1].x, v[1].y, 1., color);
+            draw_line(v[0].x, v[0].y, v[1].x, v[1].y, thickness, color);
         }
     }
 }
@@ -325,17 +328,19 @@ async fn main() {
                             let points = [last_pt.fixed, pt.fixed].map(|fixed| {
                                 viewport.translate(&navmesh.vertices()[fixed as usize])
                             });
+                            let (thickness, color) = if encountered_layer_transition {
+                                (4.375, MAGENTA)
+                            } else {
+                                (3.55, RED)
+                            };
+
                             draw_line(
                                 points[0][0],
                                 points[0][1],
                                 points[1][0],
                                 points[1][1],
-                                1.0,
-                                if encountered_layer_transition {
-                                    MAGENTA
-                                } else {
-                                    RED
-                                },
+                                thickness,
+                                color,
                             );
                             encountered_layer_transition &= last_pt.fixed == pt.fixed;
                         } else {
