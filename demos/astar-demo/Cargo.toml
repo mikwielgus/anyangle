@@ -11,6 +11,6 @@ edition = "2024"
 anyangle = { path = "../..", features = ["serde"] }
 i_triangle.workspace = true
 macroquad = "0.4"
-rstar.workspace = true
+rstared.workspace = true
 toml = "1.1"
 serde.workspace = true

@@ -11,7 +11,7 @@ use anyangle::{
 };
 use core::ops::ControlFlow;
 use macroquad::prelude::*;
-use rstar::{AABB, RTree, RTreeObject};
+use rstared::{AABB, RTree, RTreeObject};
 use std::collections::BTreeSet;
 
 type Scalar = i32;

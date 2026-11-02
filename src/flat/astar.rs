@@ -44,7 +44,7 @@ enum BestPathKey<F, V> {
     Vertex(V),
 }
 
-impl<S: Ord + fmt::Debug, T: Ord + fmt::Debug> BestPaths<S, T> {
+impl<S: Ord, T: Ord> BestPaths<S, T> {
     fn reconstruct_path<'a>(&'a self, current: &'a Node<T>) -> Vec<&'a Node<T>> {
         let mut current = current;
         let mut ret = vec![current];

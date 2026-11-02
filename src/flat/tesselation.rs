@@ -20,7 +20,7 @@ use i_triangle::i_overlay::{
     string::clip::{ClipRule, IntClip},
 };
 use i_triangle::int::triangulatable::IntTriangulatable as _;
-use rstar::{AABB, RTree, RTreeNum, RTreeObject, RTreeParams};
+use rstared::{AABB, DefaultParams, RTree, RTreeNum, RTreeObject, RTreeParams};
 
 use crate::flat::{GetLayerIds, LayerIds, MultiLayerNavmesh, Topo2DComplex};
 
@@ -69,17 +69,17 @@ impl<Scalar: RTreeNum, T> RTreeObject for Face<Scalar, T> {
         into = "RTree<Face<Scalar, T>, Params>",
         bound(
             serialize = "Scalar: Clone + RTreeNum + serde::Serialize, T: Clone + serde::Serialize, Params: Clone + RTreeParams",
-            deserialize = "Scalar: RTreeNum + IntNumber + OverlayInt + serde::Deserialize<'de>, T: Clone + PartialEq + fmt::Debug + serde::Deserialize<'de>, Params: RTreeParams"
+            deserialize = "Scalar: fmt::Debug + RTreeNum + IntNumber + OverlayInt + serde::Deserialize<'de>, T: Clone + PartialEq + fmt::Debug + serde::Deserialize<'de>, Params: RTreeParams"
         )
     )
 )]
-pub struct Tesselation<Scalar: RTreeNum, T, Params: RTreeParams = rstar::DefaultParams> {
+pub struct Tesselation<Scalar: RTreeNum, T, Params: RTreeParams = DefaultParams> {
     rtree: RTree<Face<Scalar, T>, Params>,
 }
 
 impl<Scalar, T, Params> fmt::Debug for Tesselation<Scalar, T, Params>
 where
-    Scalar: RTreeNum,
+    Scalar: fmt::Debug + RTreeNum,
     T: fmt::Debug,
     Params: RTreeParams,
 {
@@ -333,7 +333,7 @@ pub struct NotATesselation<Scalar: RTreeNum, T, Params: RTreeParams> {
 
 impl<Scalar, T, Params> fmt::Debug for NotATesselation<Scalar, T, Params>
 where
-    Scalar: RTreeNum,
+    Scalar: fmt::Debug + RTreeNum,
     T: fmt::Debug,
     Params: RTreeParams,
 {
@@ -347,7 +347,7 @@ where
 
 impl<Scalar, T, Params> fmt::Display for NotATesselation<Scalar, T, Params>
 where
-    Scalar: RTreeNum,
+    Scalar: fmt::Debug + RTreeNum,
     T: fmt::Debug,
     Params: RTreeParams,
 {
