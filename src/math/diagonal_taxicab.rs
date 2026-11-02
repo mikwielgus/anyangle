@@ -8,7 +8,7 @@ use core::{
     cmp::Ordering,
     ops::{Add, AddAssign, Mul, Sub, SubAssign},
 };
-use numlike::elem::{ConstZero, Zero};
+use numlike::elem::{AssocConstZero, Zero};
 use numlike::fns::Abs;
 
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Hash)]
@@ -154,7 +154,7 @@ impl<Scalar: Zero> Zero for DiagonalTaxicabNorm<Scalar> {
     }
 }
 
-impl<Scalar: ConstZero> ConstZero for DiagonalTaxicabNorm<Scalar> {
+impl<Scalar: AssocConstZero> AssocConstZero for DiagonalTaxicabNorm<Scalar> {
     const ZERO: Self = Self {
         along_axis: Scalar::ZERO,
         diagonal: Scalar::ZERO,

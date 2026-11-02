@@ -9,7 +9,7 @@ resolver = "2"
 [workspace.dependencies]
 bit-set = { version = "0.11", default-features = false }
 i_triangle = "0.48"
-polygon_unionfind = { version = "0.11", features = ["undoredo"] }
+polygon_unionfind = { version = "0.12", features = ["undoredo"] }
 rstar = "0.13"
 serde = { version = "1.0", default-features = false, features = ["alloc", "derive"] }
 
@@ -32,7 +32,7 @@ serde = ["dep:serde", "rstar/serde"]
 approx = ">= 0.4.0, < 0.6.0"
 bit-set.workspace = true
 i_triangle.workspace = true
-numlike = { version = "0.7", default-features = false, features = ["libm"] }
+numlike = { version = "0.8", default-features = false, features = ["libm"] }
 polygon_unionfind.workspace = true
 rstar.workspace = true
 serde = { workspace = true, optional = true }
