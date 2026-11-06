@@ -182,13 +182,7 @@ struct ViewerApp {
 
 impl ViewerApp {
     fn new() -> Self {
-        let boundary = vec![
-            [0_i32, 0],
-            [1200, 0],
-            [1100, 900],
-            [600, 1000],
-            [80, 820],
-        ];
+        let boundary = vec![[0_i32, 0], [1200, 0], [1100, 900], [600, 1000], [80, 820]];
         let parallel_inflations = [20_i32];
         let rail_offsets = [5_i32];
 
@@ -407,7 +401,9 @@ impl ViewerApp {
             let dist_sq = (p.x - screen.x).powi(2) + (p.y - screen.y).powi(2);
 
             if dist_sq <= max_dist_sq
-                && best.as_ref().is_none_or(|(_, best_dist_sq)| dist_sq < *best_dist_sq)
+                && best
+                    .as_ref()
+                    .is_none_or(|(_, best_dist_sq)| dist_sq < *best_dist_sq)
             {
                 best = Some((vertex, dist_sq));
             }
@@ -500,8 +496,7 @@ impl ViewerApp {
             let stroke = Stroke::new(1.25, Color32::from_gray(160));
 
             for (_face, face_vertices) in frozen.faces_coordinates() {
-                let screen: Vec<Pos2> =
-                    face_vertices.map(|p| self.world_to_screen(*p)).collect();
+                let screen: Vec<Pos2> = face_vertices.map(|p| self.world_to_screen(*p)).collect();
 
                 if screen.len() >= 2 {
                     painter.add(egui::Shape::closed_line(screen, stroke));
@@ -510,7 +505,11 @@ impl ViewerApp {
         }
 
         if let Some(origin) = self.origin {
-            painter.circle_filled(self.world_to_screen(origin), 7.0, Color32::from_rgb(80, 220, 120));
+            painter.circle_filled(
+                self.world_to_screen(origin),
+                7.0,
+                Color32::from_rgb(80, 220, 120),
+            );
             painter.circle_stroke(
                 self.world_to_screen(origin),
                 7.0,
@@ -692,8 +691,7 @@ impl eframe::App for ViewerApp {
 
                 for &layer in &visible_layers {
                     self.holes.push((layer, poly.exterior.clone()));
-                    self.navmesher
-                        .insert_polygon(layer.into(), poly.clone());
+                    self.navmesher.insert_polygon(layer.into(), poly.clone());
                 }
 
                 self.clear_path();
