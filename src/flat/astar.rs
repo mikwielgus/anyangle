@@ -150,7 +150,7 @@ where
             },
             _ => panic!("Start of every path is a vertex"),
         };
-        let mut funnel = crate::funnel::SimpleFunnel::<T::Scalar, Node<T::VertexId>>::new((
+        let mut funnel = super::funnel::SimpleFunnel::<T::Scalar, Node<T::VertexId>>::new((
             self.mesh.vertex_position(start.fixed),
             start,
         ));

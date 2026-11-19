@@ -9,6 +9,7 @@ use numlike::alg::PofieldBundle;
 
 pub mod astar;
 
+mod funnel;
 mod layer;
 pub use layer::{GetLayerIds, Iter as LayerIdsIter, LayerIds};
 
