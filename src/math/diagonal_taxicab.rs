@@ -8,7 +8,8 @@ use core::{
     cmp::Ordering,
     ops::{Add, AddAssign, Mul, Sub, SubAssign},
 };
-use num_traits::{ConstZero, FloatConst, MulAdd, Signed, Zero};
+use numlike::elem::{AssocConstZero, Zero};
+use numlike::fns::Abs;
 
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Hash)]
 pub struct DiagonalTaxicabNorm<Scalar> {
@@ -18,10 +19,10 @@ pub struct DiagonalTaxicabNorm<Scalar> {
 
 impl<Scalar> DiagonalTaxicabNorm<Scalar>
 where
-    Scalar: Clone + Signed + PartialOrd,
+    Scalar: Clone + Abs<Output = Scalar> + PartialOrd + Sub<Output = Scalar>,
 {
     pub fn new(x: [Scalar; 2]) -> Option<Self> {
-        let [x0, x1] = x.map(|i| i.abs());
+        let [x0, x1] = x.map(Abs::abs);
 
         let (min_value, max_value) = match x0.partial_cmp(&x1)? {
             Ordering::Less | Ordering::Equal => (x0, x1),
@@ -35,23 +36,25 @@ where
     }
 }
 
+// re: mul_add, see https://github.com/rust-lang/rust/issues/137578
+
 impl<Scalar> From<DiagonalTaxicabNorm<Scalar>> for f32
 where
     Scalar: Into<Self>,
-    Self: MulAdd,
 {
     fn from(x: DiagonalTaxicabNorm<Scalar>) -> Self {
-        Self::SQRT_2().mul_add(x.diagonal.into(), x.along_axis.into())
+        // core::f32::consts::SQRT_2.mul_add(x.diagonal.into(), x.along_axis.into())
+        core::f32::consts::SQRT_2 * x.diagonal.into() + x.along_axis.into()
     }
 }
 
 impl<Scalar> From<DiagonalTaxicabNorm<Scalar>> for f64
 where
     Scalar: Into<Self>,
-    Self: MulAdd,
 {
     fn from(x: DiagonalTaxicabNorm<Scalar>) -> Self {
-        Self::SQRT_2().mul_add(x.diagonal.into(), x.along_axis.into())
+        // core::f64::consts::SQRT_2.mul_add(x.diagonal.into(), x.along_axis.into())
+        core::f64::consts::SQRT_2 * x.diagonal.into() + x.along_axis.into()
     }
 }
 
@@ -93,7 +96,7 @@ impl<Scalar: SubAssign> SubAssign for DiagonalTaxicabNorm<Scalar> {
 
 impl<Scalar> PartialOrd for DiagonalTaxicabNorm<Scalar>
 where
-    Scalar: Clone + Ord + ConstZero + Mul<Output = Scalar> + Sub<Output = Scalar>,
+    Scalar: Clone + Ord + Add<Output = Scalar> + Mul<Output = Scalar> + Sub<Output = Scalar>,
 {
     #[inline]
     fn partial_cmp(&self, oth: &Self) -> Option<Ordering> {
@@ -103,7 +106,7 @@ where
 
 impl<Scalar> Ord for DiagonalTaxicabNorm<Scalar>
 where
-    Scalar: Clone + Ord + ConstZero + Mul<Output = Scalar> + Sub<Output = Scalar>,
+    Scalar: Clone + Ord + Add<Output = Scalar> + Mul<Output = Scalar> + Sub<Output = Scalar>,
 {
     fn cmp(&self, oth: &Self) -> Ordering {
         match (
@@ -143,21 +146,15 @@ where
 }
 
 impl<Scalar: Zero> Zero for DiagonalTaxicabNorm<Scalar> {
-    #[inline]
     fn zero() -> Self {
         Self {
             along_axis: Scalar::zero(),
             diagonal: Scalar::zero(),
         }
     }
-
-    #[inline]
-    fn is_zero(&self) -> bool {
-        self.along_axis.is_zero() && self.diagonal.is_zero()
-    }
 }
 
-impl<Scalar: ConstZero> ConstZero for DiagonalTaxicabNorm<Scalar> {
+impl<Scalar: AssocConstZero> AssocConstZero for DiagonalTaxicabNorm<Scalar> {
     const ZERO: Self = Self {
         along_axis: Scalar::ZERO,
         diagonal: Scalar::ZERO,

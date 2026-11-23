@@ -20,11 +20,12 @@ use i_triangle::i_overlay::{
     string::clip::{ClipRule, IntClip},
 };
 use i_triangle::int::triangulatable::IntTriangulatable as _;
-use rstar::{AABB, RTree, RTreeNum, RTreeObject, RTreeParams};
+use rstared::{AABB, DefaultParams, RTree, RTreeNum, RTreeObject, RTreeParams};
 
 use crate::flat::{GetLayerIds, LayerIds, MultiLayerNavmesh, Topo2DComplex};
 
 #[derive(Clone, PartialEq, Eq)]
+#[cfg_attr(feature = "serde", derive(serde::Deserialize, serde::Serialize))]
 pub struct Face<Scalar, T> {
     pub contour: Box<[[Scalar; 2]]>,
     pub data: T,
@@ -60,13 +61,25 @@ impl<Scalar: RTreeNum, T> RTreeObject for Face<Scalar, T> {
 }
 
 #[derive(Clone)]
-pub struct Tesselation<Scalar: RTreeNum, T, Params: RTreeParams = rstar::DefaultParams> {
+#[cfg_attr(feature = "serde", derive(serde::Deserialize, serde::Serialize))]
+#[cfg_attr(
+    feature = "serde",
+    serde(
+        try_from = "RTree<Face<Scalar, T>, Params>",
+        into = "RTree<Face<Scalar, T>, Params>",
+        bound(
+            serialize = "Scalar: Clone + RTreeNum + serde::Serialize, T: Clone + serde::Serialize, Params: Clone + RTreeParams",
+            deserialize = "Scalar: fmt::Debug + RTreeNum + IntNumber + OverlayInt + serde::Deserialize<'de>, T: Clone + PartialEq + fmt::Debug + serde::Deserialize<'de>, Params: RTreeParams"
+        )
+    )
+)]
+pub struct Tesselation<Scalar: RTreeNum, T, Params: RTreeParams = DefaultParams> {
     rtree: RTree<Face<Scalar, T>, Params>,
 }
 
 impl<Scalar, T, Params> fmt::Debug for Tesselation<Scalar, T, Params>
 where
-    Scalar: RTreeNum,
+    Scalar: fmt::Debug + RTreeNum,
     T: fmt::Debug,
     Params: RTreeParams,
 {
@@ -263,11 +276,148 @@ where
             ),
         }
     }
+
+    pub fn filter_map_data<U, F>(self, mut f: F) -> Tesselation<Scalar, U, Params>
+    where
+        U: Clone + Eq + Ord,
+        F: FnMut(T) -> Option<U>,
+    {
+        Tesselation {
+            rtree: RTree::bulk_load_with_params(
+                self.rtree
+                    .into_iter()
+                    .filter_map(|Face { contour, data }| {
+                        Some(Face {
+                            contour,
+                            data: f(data)?,
+                        })
+                    })
+                    .collect(),
+            ),
+        }
+    }
+
+    /// Moves all objects in this tesselation by `translation`.
+    pub fn move_by(&mut self, translation: [Scalar; 2]) {
+        self.rtree = RTree::bulk_load_with_params(
+            core::mem::take(&mut self.rtree)
+                .into_iter()
+                .map(|mut face| {
+                    for i in &mut face.contour[..] {
+                        i[0] += translation[0];
+                        i[1] += translation[1];
+                    }
+                    face
+                })
+                .collect(),
+        );
+    }
+}
+
+impl<Scalar, T, Params> From<Tesselation<Scalar, T, Params>> for RTree<Face<Scalar, T>, Params>
+where
+    Scalar: RTreeNum,
+    Params: RTreeParams,
+{
+    #[inline(always)]
+    fn from(value: Tesselation<Scalar, T, Params>) -> Self {
+        value.rtree
+    }
+}
+
+#[derive(Clone)]
+pub struct NotATesselation<Scalar: RTreeNum, T, Params: RTreeParams> {
+    pub rtree: RTree<Face<Scalar, T>, Params>,
+    pub overlapping_faces: (Face<Scalar, T>, Face<Scalar, T>),
+}
+
+impl<Scalar, T, Params> fmt::Debug for NotATesselation<Scalar, T, Params>
+where
+    Scalar: fmt::Debug + RTreeNum,
+    T: fmt::Debug,
+    Params: RTreeParams,
+{
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("NotATesselation")
+            .field("rtree", &self.rtree)
+            .field("overlapping_faces", &self.overlapping_faces)
+            .finish()
+    }
+}
+
+impl<Scalar, T, Params> fmt::Display for NotATesselation<Scalar, T, Params>
+where
+    Scalar: fmt::Debug + RTreeNum,
+    T: fmt::Debug,
+    Params: RTreeParams,
+{
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(
+            f,
+            "Given R-tree is not a valid tesselation: It has overlapping faces. {:?}",
+            self.overlapping_faces
+        )
+    }
+}
+
+impl<Scalar, T, Params> core::error::Error for NotATesselation<Scalar, T, Params>
+where
+    Scalar: fmt::Debug + RTreeNum,
+    T: fmt::Debug,
+    Params: RTreeParams,
+{
+}
+
+impl<Scalar, T, Params> TryFrom<RTree<Face<Scalar, T>, Params>> for Tesselation<Scalar, T, Params>
+where
+    Scalar: RTreeNum + IntNumber + OverlayInt,
+    T: Clone + PartialEq,
+    Params: RTreeParams,
+{
+    type Error = NotATesselation<Scalar, T, Params>;
+
+    fn try_from(rtree: RTree<Face<Scalar, T>, Params>) -> Result<Self, Self::Error> {
+        // validate that the R-tree doesn't contain any overlapping entries
+        let mut overlapping_faces = None;
+
+        'outer: for i in &rtree {
+            let i_contour_for_overlay = i.contour.iter().map(|i| (*i).into()).collect::<Vec<_>>();
+            for j in rtree.locate_in_envelope_intersecting(AABB::from_points(i.contour.iter())) {
+                if i == j {
+                    continue;
+                }
+                let mut overlay = PredicateOverlay::new(i.contour.len() + j.contour.len());
+                overlay.add_contour(&i_contour_for_overlay, ShapeType::Subject);
+                overlay.add_contour(
+                    &j.contour.iter().map(|i| (*i).into()).collect::<Vec<_>>(),
+                    ShapeType::Clip,
+                );
+                if overlay.interiors_intersect() {
+                    overlapping_faces = Some((i.clone(), j.clone()));
+                    break 'outer;
+                }
+            }
+        }
+
+        match overlapping_faces {
+            None => Ok(Self { rtree }),
+            Some(overlapping_faces) => Err(NotATesselation {
+                rtree,
+                overlapping_faces,
+            }),
+        }
+    }
 }
 
 impl<'a, Scalar, T, Params> Topo2DComplex for &'a Tesselation<Scalar, T, Params>
 where
-    Scalar: Copy + AbsDiffEq + IntNumber + RTreeNum + PartialOrd + OverlayInt,
+    Scalar: Copy
+        + AbsDiffEq
+        + IntNumber
+        + RTreeNum
+        + PartialOrd
+        + OverlayInt
+        + numlike::alg::PofieldBundle,
     Params: RTreeParams,
 {
     type VertexId = [Scalar; 2];
@@ -344,7 +494,13 @@ where
 
 impl<Scalar, T, Params> MultiLayerNavmesh for &Tesselation<Scalar, T, Params>
 where
-    Scalar: Copy + AbsDiffEq + IntNumber + RTreeNum + PartialOrd + OverlayInt,
+    Scalar: Copy
+        + AbsDiffEq
+        + IntNumber
+        + RTreeNum
+        + PartialOrd
+        + OverlayInt
+        + numlike::alg::PofieldBundle,
     T: GetLayerIds,
     Params: RTreeParams,
 {
@@ -394,11 +550,27 @@ impl<Scalar, T> FrozenTesselation<Scalar, T> {
     pub fn faces(&self) -> &[FrozenFace<T>] {
         &self.faces[..]
     }
+
+    /// Returns an iterator over the coordinates of the faces
+    /// (resolving one level of indirection).
+    pub fn faces_coordinates<'s>(
+        &'s self,
+    ) -> impl Iterator<Item = (&'s FrozenFace<T>, impl Iterator<Item = &'s [Scalar; 2]>)> {
+        self.faces.iter().map(|face| {
+            (
+                face,
+                face.contour
+                    .iter()
+                    .map(|&vertex| &self.vertices[vertex as usize]),
+            )
+        })
+    }
 }
 
 impl<Scalar, T, Params> Tesselation<Scalar, T, Params>
 where
-    Scalar: Copy + AbsDiffEq + IntNumber + RTreeNum + Ord + OverlayInt,
+    Scalar:
+        Copy + AbsDiffEq + IntNumber + RTreeNum + Ord + OverlayInt + numlike::alg::PofieldBundle,
     T: Clone,
     Params: RTreeParams,
 {
@@ -493,7 +665,7 @@ where
 
 impl<Scalar, T> Topo2DComplex for FrozenTesselation<Scalar, T>
 where
-    Scalar: Clone + AbsDiffEq + num_traits::Num + PartialOrd,
+    Scalar: Clone + AbsDiffEq + numlike::alg::PofieldBundle,
 {
     type VertexId = u32;
     type FaceId = u32;
@@ -545,7 +717,7 @@ where
 
 impl<Scalar, T> MultiLayerNavmesh for FrozenTesselation<Scalar, T>
 where
-    Scalar: Clone + AbsDiffEq + num_traits::Num + PartialOrd,
+    Scalar: Clone + AbsDiffEq + numlike::alg::PofieldBundle,
     T: GetLayerIds,
 {
     #[inline]

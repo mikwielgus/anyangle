@@ -21,7 +21,8 @@ use i_triangle::{
     },
     int::triangulatable::IntTriangulatable,
 };
-use num_traits::One;
+
+use numlike::elem::One;
 use rstar::{AABB, RTree, RTreeNum, RTreeObject};
 
 use super::{Navmesh, Remesh};

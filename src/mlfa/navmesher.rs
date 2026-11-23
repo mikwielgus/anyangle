@@ -6,19 +6,18 @@ use alloc::vec::Vec;
 use core::iter::{ExactSizeIterator, IntoIterator, once};
 
 use polygon_unionfind::{
-    Difference, Inflate, Inflated, Intersection, Laminate, Negated, Paralleled, PolygonSet,
-    PolygonUnionFind, PolygonWithData, Rings, Union,
+    Contours, Difference, Inflate, Inflated, Intersection, Laminate, Negated, Paralleled,
+    PolygonSet, PolygonUnionFind, PolygonWithData, Scalar, Union,
 };
-use rstar::RTreeNum;
 
 use super::Remesh;
 
-pub struct Navmesher<K: RTreeNum, N, D> {
+pub struct Navmesher<K: Scalar, N, D> {
     laminate: Laminate<K, PolygonWithData<K, D>>,
     navmeshes: Vec<N>,
 }
 
-impl<K: RTreeNum, N, D> Navmesher<K, N, D> {
+impl<K: Scalar, N, D> Navmesher<K, N, D> {
     pub fn navmeshes(&self) -> &[N] {
         &self.navmeshes
     }
@@ -30,11 +29,11 @@ impl<K: RTreeNum, N, D> Navmesher<K, N, D> {
 
 impl<K, N, D> Navmesher<K, N, D>
 where
-    K: RTreeNum + Default + Clone + Ord,
+    K: Scalar + Default + Clone + Ord,
     N: Default + Remesh<K>,
     D: Clone + Default,
     PolygonWithData<K, D>: Clone
-        + Rings<K>
+        + Contours<K>
         + Inflate<K>
         + Union<PolygonWithData<K, D>>
         + Difference<PolygonWithData<K, D>>
@@ -90,7 +89,7 @@ where
     }
 }
 
-fn shapes_per_layer<K: RTreeNum, D>(
+fn shapes_per_layer<K: Scalar, D>(
     laminate: &Laminate<K, PolygonWithData<K, D>>,
     row: usize,
     subrow: usize,
@@ -101,7 +100,7 @@ fn shapes_per_layer<K: RTreeNum, D>(
         .map(move |lamina| shapes_for_lamina(lamina, row, subrow))
 }
 
-fn shapes_for_lamina<K: RTreeNum, D>(
+fn shapes_for_lamina<K: Scalar, D>(
     lamina: &Paralleled<
         Paralleled<
             Negated<

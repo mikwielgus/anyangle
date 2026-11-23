@@ -1,0 +1,12 @@
+# SPDX-FileCopyrightText: 2026 anyangle contributors
+#
+# SPDX-License-Identifier: MIT OR Apache-2.0
+
+[package]
+name = "viewer-old"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+anyangle = { path = "../.." }
+macroquad = "0.4"

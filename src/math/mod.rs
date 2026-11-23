@@ -43,7 +43,12 @@ pub fn poly_convex_hull_rotation_sense<S, I>(
     pivot: usize,
 ) -> RotationSense
 where
-    S: Clone + PartialOrd + num_traits::Num,
+    S: Clone
+        + PartialOrd
+        + numlike::elem::Zero
+        + core::ops::Add<Output = S>
+        + core::ops::Mul<Output = S>
+        + core::ops::Sub<Output = S>,
 {
     let len = poly_ext_hull.len();
     assert!(pivot < 5);

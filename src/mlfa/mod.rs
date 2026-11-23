@@ -11,7 +11,7 @@ pub use delaunay::{
     DelaunayNavmesh, DelaunayNavmeshLayer, DelaunayTriangleId, DelaunayTriangulation,
 };
 pub use navmesher::Navmesher;
-pub use polygon_unionfind::{Laminate, PolygonWithData, Rings};
+pub use polygon_unionfind::{Contours, Laminate, PolygonWithData};
 
 pub trait Navmesh<K> {
     type NavnodeId;

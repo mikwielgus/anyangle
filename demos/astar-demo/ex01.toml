@@ -1,0 +1,69 @@
+# SPDX-FileCopyrightText: 2026 anyangle contributors
+#
+# SPDX-License-Identifier: MIT OR Apache-2.0
+
+ext_boundary = [
+    [0, 0],
+    [0, 100],
+    [100, 100],
+    [100, 0],
+]
+
+norm = "diagonal-taxicab"
+amount_results = 3
+
+layer_transition_penality = 10
+
+obstacles = [
+    {
+        exterior = [
+            [10, 10],
+            [10, 20],
+            [20, 20],
+            [20, 10],
+        ],
+        layers = [0]
+    },
+    {
+        exterior = [
+            [40, 40],
+            [40, 50],
+            [50, 50],
+            [50, 40],
+        ],
+        layers = [0]
+    },
+    {
+        exterior = [
+            [20, 20],
+            [20, 40],
+            [40, 40],
+            [40, 20],
+        ],
+        layers = [0]
+    },
+    {
+        exterior = [
+            [5, 5],
+            [5, 95],
+            [95, 95],
+            [95, 5],
+        ],
+        layers = []
+    },
+]
+
+endpoints = [
+    {
+        exterior = [
+            [20, 20],
+        ],
+        layers = [0]
+    },
+    {
+        exterior = [
+            [40, 40],
+        ],
+        layers = [0]
+    },
+]
