@@ -9,6 +9,7 @@ extern crate alloc;
 
 mod astar;
 pub mod flat;
+mod funnel;
 mod layer;
 pub mod math;
 pub mod mlfa;
