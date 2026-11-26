@@ -8,7 +8,7 @@ use core::{
     cmp::Ordering,
     ops::{Add, AddAssign, Mul, Sub, SubAssign},
 };
-use numlike::elem::{AssocConstZero, Zero};
+use numlike::elem::{AssocConstZero, FnZero, IsZero};
 use numlike::fns::Abs;
 
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Hash)]
@@ -145,7 +145,7 @@ where
     }
 }
 
-impl<Scalar: Zero> Zero for DiagonalTaxicabNorm<Scalar> {
+impl<Scalar: FnZero> FnZero for DiagonalTaxicabNorm<Scalar> {
     fn zero() -> Self {
         Self {
             along_axis: Scalar::zero(),
@@ -154,11 +154,20 @@ impl<Scalar: Zero> Zero for DiagonalTaxicabNorm<Scalar> {
     }
 }
 
-impl<Scalar: AssocConstZero> AssocConstZero for DiagonalTaxicabNorm<Scalar> {
+impl<Scalar: AssocConstZero<Value = Scalar>> AssocConstZero for DiagonalTaxicabNorm<Scalar> {
+    type Value = Self;
+
     const ZERO: Self = Self {
         along_axis: Scalar::ZERO,
         diagonal: Scalar::ZERO,
     };
+}
+
+impl<Scalar: IsZero> IsZero for DiagonalTaxicabNorm<Scalar> {
+    #[inline]
+    fn is_zero(self) -> bool {
+        self.along_axis.is_zero() && self.diagonal.is_zero()
+    }
 }
 
 #[cfg(test)]

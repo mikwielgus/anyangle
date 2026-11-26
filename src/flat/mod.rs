@@ -5,7 +5,7 @@
 //! two faces is [connected](https://en.wikipedia.org/wiki/Connected_space).
 
 use approx::AbsDiffEq;
-use numlike::alg::PofieldBundle;
+use numlike::alg::PofieldKit;
 
 pub mod astar;
 
@@ -21,7 +21,7 @@ pub use tesselation::{
 pub trait Topo2DComplex {
     type VertexId: Sized + Copy + Eq + Ord;
     type FaceId: Sized + Copy + Eq + Ord;
-    type Scalar: Sized + Clone + AbsDiffEq + PofieldBundle;
+    type Scalar: Sized + Clone + AbsDiffEq + PofieldKit;
 
     fn vertex_position(&self, vertex: Self::VertexId) -> [Self::Scalar; 2];
 
