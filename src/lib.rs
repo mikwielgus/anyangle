@@ -7,11 +7,12 @@
 
 extern crate alloc;
 
-mod astar;
+pub mod astar;
 pub mod flat;
-mod funnel;
+pub mod funnel;
 mod layer;
 pub mod math;
+pub mod mesh;
 pub mod mlfa;
 
 pub use layer::LayerId;
