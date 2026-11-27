@@ -3,6 +3,13 @@
 // SPDX-License-Identifier: MIT OR Apache-2.0
 
 use alloc::vec::Vec;
+
+use i_triangle::advanced::delaunay::IntDelaunay;
+use i_triangle::i_overlay::core::integer::OverlayInt;
+use i_triangle::i_overlay::i_float::int::number::int::IntNumber;
+use i_triangle::i_overlay::i_float::int::point::IntPoint;
+use i_triangle::i_overlay::i_shape::int::shape::IntShapes;
+use i_triangle::int::triangulatable::IntTriangulatable;
 use nonany::NonMaxUsize;
 use numlike::elem::Zero;
 use numlike::types::Vector2;
@@ -33,11 +40,59 @@ impl<K> DelaunayTriangulation<K> {
     }
 }
 
-/*impl<K> DelaunayTriangulation<K> {
-    pub fn new_in_holes(shaped: Vec<Vec<Vec<[K; 2]>>>) -> Self {
-        //
+impl<K> DelaunayTriangulation<K>
+where
+    K: Clone + IntNumber + OverlayInt,
+{
+    pub fn new(polygons_with_holes: Vec<Vec<Vec<Vector2<K>>>>) -> Self {
+        let i_triangle_polygons_with_holes: IntShapes<K> =
+            Self::polygons_with_holes_to_i_triangle_shapes(polygons_with_holes);
+
+        let i_triangle_delaunay = i_triangle_polygons_with_holes.triangulate().into_delaunay();
+        let triangles = Self::i_triangle_delaunay_to_triangles(i_triangle_delaunay);
+
+        Self { triangles }
     }
-}*/
+
+    fn polygons_with_holes_to_i_triangle_shapes(
+        polygons_with_holes: Vec<Vec<Vec<Vector2<K>>>>,
+    ) -> IntShapes<K> {
+        polygons_with_holes
+            .into_iter()
+            .map(|shape| {
+                shape
+                    .into_iter()
+                    .map(|contour| {
+                        contour
+                            .into_iter()
+                            .map(|p| IntPoint::new(p.x(), p.y()))
+                            .collect()
+                    })
+                    .collect()
+            })
+            .collect()
+    }
+
+    fn i_triangle_delaunay_to_triangles(
+        i_triangle_delaunay: IntDelaunay<K>,
+    ) -> Vec<[Vector2<K>; 3]> {
+        let points = i_triangle_delaunay.points();
+
+        i_triangle_delaunay
+            .triangles
+            .iter()
+            .map(|triangle| {
+                let v = &triangle.vertices;
+
+                [
+                    Vector2::new(points[v[0].index].x, points[v[0].index].y),
+                    Vector2::new(points[v[1].index].x, points[v[1].index].y),
+                    Vector2::new(points[v[2].index].x, points[v[2].index].y),
+                ]
+            })
+            .collect()
+    }
+}
 
 impl<K> Faced for DelaunayTriangulation<K> {
     type FaceId = DelaunayTriangleId;
