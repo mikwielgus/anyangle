@@ -120,6 +120,45 @@ impl<K> DelaunayMesh<K> {
     }
 }
 
+impl<K> DelaunayMesh<K>
+where
+    K: Clone + IntNumber + OverlayInt,
+{
+    pub fn new(polygons_with_holes: Vec<Vec<Vec<Vector2<K>>>>) -> Self {
+        let i_triangle_polygons_with_holes =
+            DelaunayTriangulation::polygons_with_holes_to_i_triangle_shapes(polygons_with_holes);
+        let i_triangle_delaunay = i_triangle_polygons_with_holes.triangulate().into_delaunay();
+        let adjacents = Self::i_triangle_delaunay_adjacents(&i_triangle_delaunay);
+
+        Self {
+            triangulation: DelaunayTriangulation {
+                triangles: DelaunayTriangulation::i_triangle_delaunay_to_triangles(
+                    i_triangle_delaunay,
+                ),
+            },
+            adjacents,
+        }
+    }
+
+    fn i_triangle_delaunay_adjacents(
+        i_triangle_delaunay: &IntDelaunay<K>,
+    ) -> Vec<[Option<DelaunayTriangleId>; 3]> {
+        i_triangle_delaunay
+            .triangle_neighbors()
+            .into_iter()
+            .map(|neighbors| {
+                neighbors.map(|index| {
+                    if index == usize::MAX {
+                        None
+                    } else {
+                        Some(DelaunayTriangleId::new(index))
+                    }
+                })
+            })
+            .collect()
+    }
+}
+
 impl<K> Faced for DelaunayMesh<K> {
     type FaceId = DelaunayTriangleId;
 }
