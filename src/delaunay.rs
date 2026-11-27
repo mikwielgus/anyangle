@@ -1,0 +1,115 @@
+// SPDX-FileCopyrightText: 2026 anyangle contributors
+//
+// SPDX-License-Identifier: MIT OR Apache-2.0
+
+use alloc::vec::Vec;
+use nonany::NonMaxUsize;
+use numlike::elem::Zero;
+use numlike::types::Vector2;
+
+use crate::mesh::{FaceAdjacentsConstN, FaceContourConstN, Faced, FacesSharedVerticesConstN};
+
+#[derive(Clone, Copy, Debug, Eq, Ord, PartialEq, PartialOrd)]
+pub struct DelaunayTriangleId(NonMaxUsize);
+
+impl DelaunayTriangleId {
+    pub fn new(index: usize) -> Self {
+        Self(NonMaxUsize::new(index).expect("index is MAX, which is forbidden"))
+    }
+
+    pub fn index(&self) -> usize {
+        self.0.get()
+    }
+}
+
+#[derive(Clone, Debug, Default)]
+pub struct DelaunayTriangulation<K> {
+    triangles: Vec<[Vector2<K>; 3]>,
+}
+
+impl<K> DelaunayTriangulation<K> {
+    pub fn triangles(&self) -> &[[Vector2<K>; 3]] {
+        &self.triangles
+    }
+}
+
+/*impl<K> DelaunayTriangulation<K> {
+    pub fn new_in_holes(shaped: Vec<Vec<Vec<[K; 2]>>>) -> Self {
+        //
+    }
+}*/
+
+impl<K> Faced for DelaunayTriangulation<K> {
+    type FaceId = DelaunayTriangleId;
+}
+
+impl<K> FaceContourConstN<K, 3> for DelaunayTriangulation<K> {
+    fn face_contour(&self, face: &DelaunayTriangleId) -> &[Vector2<K>; 3] {
+        &self.triangles[face.index()]
+    }
+}
+
+#[derive(Clone, Debug, Default)]
+pub struct DelaunayMesh<K> {
+    triangulation: DelaunayTriangulation<K>,
+    adjacents: Vec<[Option<DelaunayTriangleId>; 3]>,
+}
+
+impl<K> DelaunayMesh<K> {
+    pub fn vertices(&self) -> &[[Vector2<K>; 3]] {
+        self.triangulation.triangles()
+    }
+
+    pub fn adjacents(&self) -> &[[Option<DelaunayTriangleId>; 3]] {
+        &self.adjacents
+    }
+}
+
+impl<K> Faced for DelaunayMesh<K> {
+    type FaceId = DelaunayTriangleId;
+}
+
+impl<K> FaceContourConstN<K, 3> for DelaunayMesh<K> {
+    fn face_contour(&self, face: &DelaunayTriangleId) -> &[Vector2<K>; 3] {
+        self.triangulation.face_contour(face)
+    }
+}
+
+impl<K> FaceAdjacentsConstN<3> for DelaunayMesh<K> {
+    fn face_adjacents(&self, face: &DelaunayTriangleId) -> &[Option<DelaunayTriangleId>; 3] {
+        &self.adjacents[face.index()]
+    }
+}
+
+impl<K: Clone + PartialEq + Zero> FacesSharedVerticesConstN<K, 2> for DelaunayMesh<K> {
+    fn faces_shared_vertices(
+        &self,
+        face1: &DelaunayTriangleId,
+        face2: &DelaunayTriangleId,
+    ) -> Option<[Vector2<K>; 2]> {
+        let contour1 = self.face_contour(face1);
+        let contour2 = self.face_contour(face2);
+
+        for i in 0..3 {
+            let a = contour1[i].clone();
+            let b = contour1[(i + 1) % 3].clone();
+
+            if contour2.contains(&a) && contour2.contains(&b) {
+                return Some([a, b]);
+            }
+        }
+
+        None
+    }
+}
+
+#[derive(Clone, Debug, Default)]
+pub struct DelaunayMultimesh<K> {
+    layers: Vec<DelaunayMesh<K>>,
+}
+
+impl<K> DelaunayMultimesh<K> {
+    pub fn layers(&self) -> &[DelaunayMesh<K>] {
+        &self.layers
+    }
+}

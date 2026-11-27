@@ -32,6 +32,7 @@ serde = ["dep:serde", "rstared/serde"]
 approx = ">= 0.4.0, < 0.6.0"
 bit-set.workspace = true
 i_triangle.workspace = true
+nonany = "0.3"
 numlike = { version = "0.10", default-features = false, features = ["libm"] }
 polygon_unionfind.workspace = true
 rstared.workspace = true

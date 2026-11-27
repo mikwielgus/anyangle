@@ -8,6 +8,7 @@
 extern crate alloc;
 
 pub mod astar;
+pub mod delaunay;
 pub mod flat;
 pub mod funnel;
 mod layer;
