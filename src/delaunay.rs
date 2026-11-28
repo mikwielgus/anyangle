@@ -14,7 +14,9 @@ use nonany::NonMaxUsize;
 use numlike::elem::Zero;
 use numlike::types::Vector2;
 
-use crate::mesh::{FaceAdjacentsConstN, FaceContourConstN, Faced, FacesSharedVerticesConstN};
+use crate::mesh::{
+    FaceAdjacentsConstN, FaceContourConstN, Faced, FacesSharedVerticesConstN, Layered,
+};
 
 #[derive(Clone, Copy, Debug, Eq, Ord, PartialEq, PartialOrd)]
 pub struct DelaunayTriangleId(NonMaxUsize);
@@ -197,13 +199,34 @@ impl<K: Clone + PartialEq + Zero> FacesSharedVerticesConstN<K, 2> for DelaunayMe
     }
 }
 
+#[derive(Clone, Copy, Debug, Eq, Ord, PartialEq, PartialOrd)]
+pub struct DelaunayLayerId(NonMaxUsize);
+
+impl DelaunayLayerId {
+    pub fn new(index: usize) -> Self {
+        Self(NonMaxUsize::new(index).expect("index is MAX, which is forbidden"))
+    }
+
+    pub fn index(&self) -> usize {
+        self.0.get()
+    }
+}
+
 #[derive(Clone, Debug, Default)]
-pub struct DelaunayMultimesh<K> {
+pub struct MultilayerDelaunayMesh<K> {
     layers: Vec<DelaunayMesh<K>>,
 }
 
-impl<K> DelaunayMultimesh<K> {
+impl<K> MultilayerDelaunayMesh<K> {
     pub fn layers(&self) -> &[DelaunayMesh<K>] {
         &self.layers
     }
+
+    pub fn layer_mut(&mut self, layer: DelaunayLayerId) -> &mut DelaunayMesh<K> {
+        &mut self.layers[layer.index()]
+    }
+}
+
+impl<K> Layered for MultilayerDelaunayMesh<K> {
+    type LayerId = DelaunayLayerId;
 }

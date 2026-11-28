@@ -23,3 +23,7 @@ pub trait FacesSharedVerticesConstN<K, const N: usize>: Faced {
         face2: &Self::FaceId,
     ) -> Option<[Vector2<K>; N]>;
 }
+
+pub trait Layered {
+    type LayerId;
+}
