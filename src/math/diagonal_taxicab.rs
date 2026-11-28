@@ -302,17 +302,17 @@ mod tests {
 
     #[test]
     fn dt_polygon00() {
-        let _ = diagonal_taxicab_polygon::<i32>([3, 5]);
-        let _ = diagonal_taxicab_polygon::<i32>([5, 3]);
+        let _ = diagonal_taxicab_polygon::<i32>([3, 5]).unwrap();
+        let _ = diagonal_taxicab_polygon::<i32>([5, 3]).unwrap();
 
-        let _ = diagonal_taxicab_polygon::<i32>([3, 10]);
-        let _ = diagonal_taxicab_polygon::<i32>([3, -10]);
-        let _ = diagonal_taxicab_polygon::<i32>([-3, 10]);
-        let _ = diagonal_taxicab_polygon::<i32>([-3, -10]);
+        let _ = diagonal_taxicab_polygon::<i32>([3, 10]).unwrap();
+        let _ = diagonal_taxicab_polygon::<i32>([3, -10]).unwrap();
+        let _ = diagonal_taxicab_polygon::<i32>([-3, 10]).unwrap();
+        let _ = diagonal_taxicab_polygon::<i32>([-3, -10]).unwrap();
 
-        let _ = diagonal_taxicab_polygon::<i32>([10, 3]);
-        let _ = diagonal_taxicab_polygon::<i32>([-10, 3]);
-        let _ = diagonal_taxicab_polygon::<i32>([10, -3]);
-        let _ = diagonal_taxicab_polygon::<i32>([-10, -3]);
+        let _ = diagonal_taxicab_polygon::<i32>([10, 3]).unwrap();
+        let _ = diagonal_taxicab_polygon::<i32>([-10, 3]).unwrap();
+        let _ = diagonal_taxicab_polygon::<i32>([10, -3]).unwrap();
+        let _ = diagonal_taxicab_polygon::<i32>([-10, -3]).unwrap();
     }
 }
