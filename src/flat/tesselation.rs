@@ -174,7 +174,8 @@ where
         )) {
             let shape = vec![contour.into_iter().map(Into::into).collect::<Vec<_>>()];
             if !alloc_shapes.is_empty() {
-                let mut overlay = Overlay::with_shapes(&alloc_shapes, slice::from_ref(&shape));
+                let mut overlay =
+                    Overlay::from_subj_and_clip(&alloc_shapes, slice::from_ref(&shape));
                 let local_graph = overlay
                     .build_graph_view(FillRule::EvenOdd)
                     .expect("unable to build graph view");
