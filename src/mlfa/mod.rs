@@ -2,14 +2,10 @@
 //
 // SPDX-License-Identifier: MIT OR Apache-2.0
 
-mod delaunay;
 mod navmesher;
 
 use alloc::vec::Vec;
 
-pub use delaunay::{
-    DelaunayNavmesh, DelaunayNavmeshLayer, DelaunayTriangleId, DelaunayTriangulation,
-};
 pub use navmesher::Navmesher;
 pub use polygon_unionfind::{Contours, Laminate, PolygonWithData};
 
