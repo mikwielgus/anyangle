@@ -6,7 +6,8 @@
 use approx::AbsDiffEq;
 use core::{
     cmp::Ordering,
-    ops::{Add, AddAssign, Mul, Sub, SubAssign},
+    fmt,
+    ops::{Add, AddAssign, Mul, Neg, Sub, SubAssign},
 };
 use numlike::elem::{AssocConstZero, FnZero, IsZero};
 use numlike::fns::Abs;
@@ -34,6 +35,64 @@ where
             diagonal: min_value,
         })
     }
+}
+
+/// Compute the diagonal-taxicab polygon corresponding to the line segment `x`
+pub fn diagonal_taxicab_polygon<Scalar>(x: [Scalar; 2]) -> Option<[[Scalar; 2]; 4]>
+where
+    Scalar: Clone
+        + Abs<Output = Scalar>
+        + FnZero
+        + PartialOrd
+        + Neg<Output = Scalar>
+        + Sub<Output = Scalar>,
+    Scalar: fmt::Debug,
+{
+    let [xa0, xa1] = x
+        .clone()
+        .map(|i| (i.clone(), i.clone().abs(), i.clone() != i.abs()));
+
+    let (min_value, max_value, flip) = match xa0.1.partial_cmp(&xa1.1)? {
+        Ordering::Less | Ordering::Equal => (xa0, xa1, false),
+        Ordering::Greater => (xa1, xa0, true),
+    };
+
+    let norm = DiagonalTaxicabNorm {
+        along_axis: max_value.1.clone() - min_value.1.clone(),
+        diagonal: min_value.1.clone(),
+    };
+
+    let mut ret = [
+        [Scalar::zero(), Scalar::zero()],
+        [norm.diagonal.clone(), norm.diagonal.clone()],
+        [norm.diagonal.clone(), max_value.1.clone()],
+        [Scalar::zero(), norm.along_axis.clone()],
+    ];
+
+    {
+        let mut neg_component = |comp: usize| {
+            for i in &mut ret[..] {
+                let new = -i[comp].clone();
+                i[comp] = new;
+            }
+        };
+
+        if min_value.2 {
+            neg_component(0);
+        }
+        if max_value.2 {
+            neg_component(1);
+        }
+    }
+
+    if flip {
+        for i in &mut ret[..] {
+            i.reverse();
+        }
+    }
+
+    debug_assert_eq!(&ret[2], &x);
+    Some(ret)
 }
 
 // re: mul_add, see https://github.com/rust-lang/rust/issues/137578
@@ -239,5 +298,21 @@ mod tests {
                 diagonal: 0,
             }
         )
+    }
+
+    #[test]
+    fn dt_polygon00() {
+        let _ = diagonal_taxicab_polygon::<i32>([3, 5]);
+        let _ = diagonal_taxicab_polygon::<i32>([5, 3]);
+
+        let _ = diagonal_taxicab_polygon::<i32>([3, 10]);
+        let _ = diagonal_taxicab_polygon::<i32>([3, -10]);
+        let _ = diagonal_taxicab_polygon::<i32>([-3, 10]);
+        let _ = diagonal_taxicab_polygon::<i32>([-3, -10]);
+
+        let _ = diagonal_taxicab_polygon::<i32>([10, 3]);
+        let _ = diagonal_taxicab_polygon::<i32>([-10, 3]);
+        let _ = diagonal_taxicab_polygon::<i32>([10, -3]);
+        let _ = diagonal_taxicab_polygon::<i32>([-10, -3]);
     }
 }
