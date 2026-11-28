@@ -5,7 +5,7 @@
 // Programming of this file was entirely done by prompting Cursor Composer 2.0
 // Fast.
 
-use anyangle::mlfa::{Contours, DelaunayNavmesh, Navmesher, PolygonWithData};
+use anyangle::mlfa::{Contours, Navmesher, PolygonWithData};
 use macroquad::prelude::*;
 use macroquad::rand::gen_range;
 
@@ -254,12 +254,8 @@ async fn main() {
     let rail_offsets = [5_i32];
     let subrow_count = rail_offsets.len() + 1;
 
-    let mut navmesher = Navmesher::<i32, DelaunayNavmesh<i32>, ()>::new(
-        boundary,
-        num_layers,
-        parallel_inflations,
-        rail_offsets,
-    );
+    let mut navmesher =
+        Navmesher::<i32, ()>::new(boundary, num_layers, parallel_inflations, rail_offsets);
 
     let n = navmesher.navmeshes()[0].layers().len();
     let num_parallel_rows = navmesher.navmeshes().len();
@@ -390,11 +386,10 @@ async fn main() {
             let stroke = Color::new(fill.r * 0.6, fill.g * 0.6, fill.b * 0.6, 0.85);
             let line_w = if active { 2.35 } else { 1.2 };
 
-            let tri = layer.triangulation();
-            for verts in tri.vertices() {
-                let a = world_to_screen(verts[0], origin, zoom);
-                let b = world_to_screen(verts[1], origin, zoom);
-                let c = world_to_screen(verts[2], origin, zoom);
+            for verts in layer.vertices() {
+                let a = world_to_screen([verts[0].x(), verts[0].y()], origin, zoom);
+                let b = world_to_screen([verts[1].x(), verts[1].y()], origin, zoom);
+                let c = world_to_screen([verts[2].x(), verts[2].y()], origin, zoom);
                 draw_triangle(a, b, c, fill_a);
                 draw_triangle_lines(a, b, c, line_w, stroke);
             }

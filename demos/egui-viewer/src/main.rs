@@ -9,7 +9,7 @@ use anyangle::{
         astar::{Endpoint, FunnelEntry, Output, astar},
     },
     math::diagonal_taxicab::DiagonalTaxicabNorm,
-    mlfa::{Contours, DelaunayNavmesh, Navmesher, PolygonWithData},
+    mlfa::{Contours, Navmesher, PolygonWithData},
 };
 use core::ops::ControlFlow;
 use eframe::egui::{self, Color32, Pos2, Sense, Stroke, Ui, Vec2};
@@ -164,7 +164,7 @@ fn random_convex_polygon(
 struct ViewerApp {
     boundary: Vec<[i32; 2]>,
     holes: Vec<(usize, Vec<[i32; 2]>)>,
-    navmesher: Navmesher<i32, DelaunayNavmesh<i32>, ()>,
+    navmesher: Navmesher<i32, ()>,
     layer_visible: Vec<bool>,
     interlamina_visible: Vec<bool>,
     active_layer: usize,
@@ -186,7 +186,7 @@ impl ViewerApp {
         let parallel_inflations = [20_i32];
         let rail_offsets = [5_i32];
 
-        let navmesher = Navmesher::<i32, DelaunayNavmesh<i32>, ()>::new(
+        let navmesher = Navmesher::<i32, ()>::new(
             boundary.iter().copied(),
             NUM_LAYERS,
             parallel_inflations,
@@ -366,8 +366,10 @@ impl ViewerApp {
                 continue;
             }
 
-            for tri in layer.triangulation().vertices() {
-                vertices.extend_from_slice(tri);
+            for tri in layer.vertices() {
+                for vertex in tri {
+                    vertices.push([vertex.x(), vertex.y()]);
+                }
             }
         }
 
@@ -479,11 +481,11 @@ impl ViewerApp {
                 with_alpha(fill, 140),
             );
 
-            for verts in layer.triangulation().vertices() {
+            for verts in layer.vertices() {
                 let tri = [
-                    self.world_to_screen(verts[0]),
-                    self.world_to_screen(verts[1]),
-                    self.world_to_screen(verts[2]),
+                    self.world_to_screen([verts[0].x(), verts[0].y()]),
+                    self.world_to_screen([verts[1].x(), verts[1].y()]),
+                    self.world_to_screen([verts[2].x(), verts[2].y()]),
                 ];
 
                 painter.add(egui::Shape::convex_polygon(tri.to_vec(), fill_a, stroke));

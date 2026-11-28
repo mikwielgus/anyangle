@@ -5,20 +5,23 @@
 use alloc::vec::Vec;
 use core::iter::{ExactSizeIterator, IntoIterator, once};
 
+use i_triangle::i_overlay::core::integer::OverlayInt;
+use i_triangle::i_overlay::i_float::int::number::int::IntNumber;
+use numlike::types::Vector2;
 use polygon_unionfind::{
     Contours, Difference, Inflate, Inflated, Intersection, Laminate, Negated, Paralleled,
     PolygonSet, PolygonUnionFind, PolygonWithData, Scalar, Union,
 };
 
-use super::Remesh;
+use crate::delaunay::{DelaunayLayerId, DelaunayMesh, MultilayerDelaunayMesh};
 
-pub struct Navmesher<K: Scalar, N, D> {
+pub struct Navmesher<K: Scalar, D> {
     laminate: Laminate<K, PolygonWithData<K, D>>,
-    navmeshes: Vec<N>,
+    navmeshes: Vec<MultilayerDelaunayMesh<K>>,
 }
 
-impl<K: Scalar, N, D> Navmesher<K, N, D> {
-    pub fn navmeshes(&self) -> &[N] {
+impl<K: Scalar, D> Navmesher<K, D> {
+    pub fn navmeshes(&self) -> &[MultilayerDelaunayMesh<K>] {
         &self.navmeshes
     }
 
@@ -27,10 +30,9 @@ impl<K: Scalar, N, D> Navmesher<K, N, D> {
     }
 }
 
-impl<K, N, D> Navmesher<K, N, D>
+impl<K, D> Navmesher<K, D>
 where
-    K: Scalar + Default + Clone + Ord,
-    N: Default + Remesh<K>,
+    K: Scalar + Default + Clone + Ord + IntNumber + OverlayInt,
     D: Clone + Default,
     PolygonWithData<K, D>: Clone
         + Contours<K>
@@ -67,9 +69,11 @@ where
 
         let navmeshes: Vec<_> = (0..row_count)
             .map(|row| {
-                let mut navmesh = N::default();
-                navmesh.remesh(shapes_per_layer(&laminate, row, 0));
-                navmesh
+                MultilayerDelaunayMesh::from_layers(
+                    shapes_per_layer(&laminate, row, 0)
+                        .map(|shapes| DelaunayMesh::new(shapes_to_polygons_with_holes(shapes)))
+                        .collect(),
+                )
             })
             .collect();
 
@@ -84,9 +88,30 @@ where
         let lamina = &self.laminate.laminas()[usize::from(layer)];
 
         for (row, navmesh) in self.navmeshes.iter_mut().enumerate() {
-            navmesh.remesh_at(layer, shapes_for_lamina(lamina, row, 0));
+            *navmesh.layer_mut(DelaunayLayerId::new(usize::from(layer))) = DelaunayMesh::new(
+                shapes_to_polygons_with_holes(shapes_for_lamina(lamina, row, 0)),
+            );
         }
     }
+}
+
+fn shapes_to_polygons_with_holes<K: Clone>(
+    shapes: Vec<Vec<Vec<[K; 2]>>>,
+) -> Vec<Vec<Vec<Vector2<K>>>> {
+    shapes
+        .into_iter()
+        .map(|shape| {
+            shape
+                .into_iter()
+                .map(|contour| {
+                    contour
+                        .into_iter()
+                        .map(|p| Vector2::new(p[0].clone(), p[1].clone()))
+                        .collect()
+                })
+                .collect()
+        })
+        .collect()
 }
 
 fn shapes_per_layer<K: Scalar, D>(
