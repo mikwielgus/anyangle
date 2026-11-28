@@ -218,6 +218,10 @@ pub struct MultilayerDelaunayMesh<K> {
 }
 
 impl<K> MultilayerDelaunayMesh<K> {
+    pub fn from_layers(layers: Vec<DelaunayMesh<K>>) -> Self {
+        Self { layers }
+    }
+
     pub fn layers(&self) -> &[DelaunayMesh<K>] {
         &self.layers
     }
